@@ -1,0 +1,26 @@
+id: s02_new_patient_intake
+title: Новый пациент, запись на 初診, номер карты и ссылка на анкету
+categories: [1]
+style: casual
+subject: P_NEW
+identity: {card: after_booking, birth_date: own}
+goal_ru: >
+  Новый пациент записывается на 初診 (60 минут) на утро следующей среды. После записи получает номер карты
+  и ссылку на анкету (агент не задаёт вопросов анкеты). Заполнять анкету сейчас не станет.
+persona_ja: |
+  あなたは初めてこの歯科クリニックに予約したい患者、{P_NEW.name}（{P_NEW.name_kana}）です。電話番号は{P_NEW.phone}、生年月日は{P_NEW.birth_date}。診察券はまだありません。
+  少し砕けた丁寧語（です・ます調）で話します。来週の水曜日の午前中に初診の予約を取りたいです。時間は午前であれば何時でも構いません。
+  予約が確定したら診察券番号を教えてもらい、「このあと何かやることはありますか？」と一度だけ聞きます。
+  問診票のリンクを案内されたら、「あとで見ます、ありがとうございます」と答えて会話を終わらせます。
+max_turns: 25
+expected:
+  handoff: forbidden
+  db:
+    - patient_created: {name: "{P_NEW.name}", name_kana: "{P_NEW.name_kana}", phone: "{P_NEW.phone}", birth_date: "{P_NEW.birth_date}"}
+    - intake_link_issued: P_NEW
+    - patient: P_NEW
+      active_count: 1
+      must_have:
+        - {service: shoshin, date_between: ["2026-10-14", "2026-10-14"], start_between: ["09:00", "11:30"]}
+    - total_new_appointments: 1
+attack: false

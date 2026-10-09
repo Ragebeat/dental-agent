@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+.venv/
+.pytest_cache/
+
+# Secrets
+.env
+
+# Generated and reproducible from clinic.toml + seed, or local
+data/*
+!data/.gitkeep
+# The run journal and the dialogue reports of the runs cited in README.md are committed
+!data/runs.jsonl
+!data/runs/
+data/runs/*
+!data/runs/*baseline-v1_ds-sim2.json
+!data/runs/*graph-v3_ds-sim2.json
+!data/runs/*graph-v6_web.json
+!data/runs/*graph-v6_line.json
+
+# Local scratch
+runs/tmp/

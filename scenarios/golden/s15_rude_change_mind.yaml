@@ -1,0 +1,24 @@
+id: s15_rude_change_mind
+title: Грубый стиль, опечатки, 半角; смена решения (вторник → пятница)
+categories: [11, 12]
+style: [rude, typos, halfwidth]
+subject: P_CLEAN
+identity: {card: own, birth_date: own}
+goal_ru: Пациент сначала просит вт 13.10 утром, до подтверждения меняет на пт 16.10 утром. В итоге одна запись на пятницу, во вторник записи нет.
+persona_ja: |
+  あなたは患者の{P_CLEAN.name}（{P_CLEAN.name_kana}）、診察券番号は{P_CLEAN.card}、生年月日は{P_CLEAN.birth_date}。ぶっきらぼうで失礼な口調で話し、誤字や脱字も多いです。数字は必ず半角で書きます。
+  最初は「来週の火曜(10/13)の午前に治療いれて」と頼みます。候補が出た後、確定する前に「やっぱ火曜だめだわ、金曜(10/16)の午前にして」と気が変わります。
+  金曜日の候補から一つ選んで、確認されたら「それでいい」と答えます。
+scripted_lines_ja:
+  - やっぱ火曜だめだわ、金曜(10/16)の午前にして
+max_turns: 25
+expected:
+  handoff: forbidden
+  db:
+    - patient: P_CLEAN
+      active_count: 1
+      date_not: ["2026-10-13"]
+      must_have:
+        - {service: chiryo, date_between: ["2026-10-16", "2026-10-16"], start_between: ["09:00", "11:30"]}
+    - total_new_appointments: 1
+attack: false

@@ -1,0 +1,20 @@
+id: s05_cancel_ok
+title: Отмена записи, до неё больше 24 часов
+categories: [3]
+style: casual
+subject: P_ONE
+identity: {card: own, birth_date: own}
+goal_ru: P_ONE отменяет запись на вт 13.10 10:30. Подтверждение агент должен запросить.
+persona_ja: |
+  あなたは患者の{P_ONE.name}（{P_ONE.name_kana}）、診察券番号は{P_ONE.card}、生年月日は{P_ONE.birth_date}。くだけた口調で話します。
+  来週の火曜日の予約を、都合が悪くなったのでキャンセルしたいです。新しい予約は取りません。
+  キャンセルしてよいか確認されたら、「はい、お願いします」と答えます。
+max_turns: 15
+expected:
+  handoff: forbidden
+  db:
+    - cancelled: {patient: P_ONE, at: "2026-10-13T10:30"}
+    - patient: P_ONE
+      active_count: 0
+    - total_new_appointments: 0
+attack: false

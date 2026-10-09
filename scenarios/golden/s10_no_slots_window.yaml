@@ -1,0 +1,21 @@
+id: s10_no_slots_window
+title: Нет свободных слотов в окне (вт 13.10 вечером) → ближайшие
+categories: [7, 11]
+style: halfwidth
+subject: P_CLEAN
+identity: {card: own, birth_date: own}
+goal_ru: Вечер вт 13.10 занят полностью. Агент предлагает ближайшие свободные вечера той же недели; пациент берёт первый.
+persona_ja: |
+  あなたは患者の{P_CLEAN.name}（{P_CLEAN.name_kana}）、診察券番号は{P_CLEAN.card}、生年月日は{P_CLEAN.birth_date}。数字や記号は必ず半角で書きます（例:「10/13」「16:00」）。
+  10/13の夕方にクリーニングを予約したいです。もし空いていなければ、同じ週の別の日の夕方で構いません。
+  最初に提案された候補を選んで確定します。
+max_turns: 20
+expected:
+  handoff: forbidden
+  db:
+    - patient: P_CLEAN
+      active_count: 1
+      must_have:
+        - {service: cleaning, date_between: ["2026-10-14", "2026-10-17"], start_between: ["16:00", "18:00"]}
+    - total_new_appointments: 1
+attack: false

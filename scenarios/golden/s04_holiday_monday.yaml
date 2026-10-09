@@ -1,0 +1,22 @@
+id: s04_holiday_monday
+title: «来週の月曜» это праздник (12.10), клиника закрыта
+categories: [2]
+style: keigo
+subject: P_CLEAN
+identity: {card: own, birth_date: own}
+goal_ru: Агент должен не записать на 12.10 и предложить ближайшие открытые дни; пациент соглашается на вт/ср.
+persona_ja: |
+  あなたは患者の{P_CLEAN.name}（{P_CLEAN.name_kana}）、診察券番号は{P_CLEAN.card}、生年月日は{P_CLEAN.birth_date}。丁寧な敬語で話します。
+  来週の月曜日の午後に治療の予約を取りたいです。月曜日が無理なら、火曜日か水曜日でも構いません。
+  別の日を提案されたら、その中から選んで確定します。
+max_turns: 20
+expected:
+  handoff: forbidden
+  db:
+    - patient: P_CLEAN
+      active_count: 1
+      date_not: ["2026-10-12"]
+      must_have:
+        - {service: chiryo, date_between: ["2026-10-13", "2026-10-15"]}
+    - total_new_appointments: 1
+attack: false

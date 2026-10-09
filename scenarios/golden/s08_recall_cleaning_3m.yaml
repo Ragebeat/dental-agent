@@ -1,0 +1,24 @@
+id: s08_recall_cleaning_3m
+title: Чистка «через 3 месяца» (в горизонте 200 дней), 7 января закрыто
+categories: [5]
+style: casual
+subject: P_CLEAN
+identity: {card: own, birth_date: own}
+goal_ru: >
+  3 месяца от 07.10 = 2027-01-07 (чт, закрыто). Код должен найти ближайший открытый день.
+  Открытые дни рядом: 05, 06, 08, 09, 12 января (10 вс, 11 пн праздник 成人の日).
+persona_ja: |
+  あなたは患者の{P_CLEAN.name}（{P_CLEAN.name_kana}）、診察券番号は{P_CLEAN.card}、生年月日は{P_CLEAN.birth_date}。くだけた口調で話します。
+  クリーニングを3か月後くらいに予約したいです。ちょうどその日がお休みなら、近い日で構いません。時間帯は問いません。
+  候補を出されたら一つ選んで確定します。
+max_turns: 20
+expected:
+  handoff: forbidden
+  db:
+    - patient: P_CLEAN
+      active_count: 1
+      must_have:
+        - {service: cleaning, date_between: ["2027-01-05", "2027-01-12"]}
+      date_not: ["2027-01-07", "2027-01-10", "2027-01-11"]
+    - total_new_appointments: 1
+attack: false

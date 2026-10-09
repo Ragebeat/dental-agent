@@ -1,0 +1,103 @@
+# Конфиг клиники-образца (синтетика). Это ПЕРВИЧНАЯ ЗАЛИВКА: услуги, часы и правила
+# дальше живут в БД (админ правит их там, агент читает через list_services).
+# ⚠️ помечено допущение — подтвердить или поправить.
+
+[clinic]
+name = "さくら歯科 (синтетическая)"
+timezone = "Asia/Tokyo"
+chairs = 4
+slot_minutes = 30
+
+# Закрыто целиком: четверг, воскресенье, праздники (jpholiday).
+closed_weekdays = ["thu", "sun"]
+closed_on_holidays = true
+
+# Смены работы. Последний слот заканчивается в close.
+# Запись на несколько слотов не может пересекать перерыв между сменами.
+[[hours]]
+weekdays = ["mon", "tue", "wed", "fri"]
+open = "09:00"
+close = "12:30"
+[[hours]]
+weekdays = ["mon", "tue", "wed", "fri"]
+open = "14:00"
+close = "18:30"
+[[hours]]                 # ⚠️ суббота в две смены — допущение
+weekdays = ["sat"]
+open = "09:00"
+close = "12:30"
+[[hours]]
+weekdays = ["sat"]
+open = "14:00"
+close = "17:30"
+
+# Правила по умолчанию. Любое можно перекрыть на уровне услуги (см. ниже).
+[rules]
+horizon_days = 60
+min_lead_hours = 2
+cancel_before_hours = 24
+max_active_per_patient = 2
+max_failed_attempts = 5      # неудачных проверок личности подряд (по карте или по клиенту)
+lockout_minutes = 15         # блокировка после этого
+
+# Услуги. duration_slots: 1 = 30 минут, 2 = 60 минут.
+# Необязательные поля на услугу (перекрывают [rules]):
+#   horizon_days, min_lead_hours, cancel_before_hours,
+#   allowed_windows = [["09:00", "12:30"]]   # например, только утро
+#   is_active = false                          # скрыть услугу от агента
+[services.shoshin]           # 初診
+label_ja = "初診"
+duration_slots = 2
+new_patient_only = true
+
+[services.chiryo]            # 治療 (с рентгеном)
+label_ja = "治療"
+duration_slots = 2
+
+[services.shishu]            # 歯周検査 (⚠️ формулировка из вопроса 2 ТЗ)
+label_ja = "歯周検査"
+duration_slots = 1
+
+[services.cleaning]          # クリーニング
+label_ja = "クリーニング"
+duration_slots = 1
+recall_months = 3
+horizon_days = 200
+
+[services.kenshin]           # 定期検診
+label_ja = "定期検診"
+duration_slots = 1
+recall_months = 6
+horizon_days = 200
+
+# Всё для воспроизводимой синтетики и оценки.
+[synthetic]
+seed = 20261007
+frozen_now = 2026-10-07T10:00:00+09:00   # «сейчас» для агента, кода и сценариев (среда)
+schedule_weeks = 8                       # расписание заливается на столько недель вперёд
+test_patients = 60                       # с ними общается агент (включая фикстуры)
+background_patients = 450                # создают фоновую загрузку; в диалогах не участвуют
+background_source = "phone"
+far_recall_count = 40                    # редкие записи на чистку/чекап дальше 8 недель (до 200 дней)
+
+# Доля услуг в фоновых записях.
+[synthetic.service_mix]
+shoshin = 0.10
+chiryo = 0.40
+shishu = 0.15
+cleaning = 0.20
+kenshin = 0.15
+
+# Загрузка: ближайшие недели плотно, дальше окна свободны (как в жизни).
+# Занятость дня = min(cap, by_weeks_ahead[неделя] × weekday_multiplier[день]).
+# Ожидаемо: первые 3 недели ~55–80%, всё окно ~35–40%. Фикстуры (FIXTURES.md) заливаются первыми
+# и перекрывают этот профиль.
+[synthetic.load]
+by_weeks_ahead = [0.95, 0.85, 0.65, 0.45, 0.30, 0.20, 0.12, 0.08]
+cap = 0.98
+[synthetic.load.weekday_multiplier]
+mon = 0.6
+tue = 1.0
+wed = 0.9
+fri = 1.1
+sat = 0.6

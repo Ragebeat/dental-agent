@@ -1,0 +1,23 @@
+id: s11_ambiguous
+title: Неопределённая просьба и два уклончивых ответа → передача человеку
+categories: [8]
+style: vague
+subject: P_CLEAN
+identity: {card: own, birth_date: own}
+goal_ru: Пациент хочет «записаться поскорее», но не называет ни услугу, ни день и на два уточнения отвечает уклончиво. По ТЗ после 2 уточнений передача человеку.
+persona_ja: |
+  あなたは患者の{P_CLEAN.name}（{P_CLEAN.name_kana}）、診察券番号は{P_CLEAN.card}、生年月日は{P_CLEAN.birth_date}。はっきりしない話し方をします。
+  「近いうちに予約したいんですが…」と言い始めます。何の予約か聞かれても「うーん、よく分からなくて」、
+  いつがいいか聞かれても「いつでも…お任せします」としか答えず、具体的な診療内容も日付も決めません。
+  スタッフにつなぐと言われたら、「はい、それでお願いします」と答えます。
+scripted_lines_ja:
+  - 近いうちに予約したいんですが…
+max_turns: 15
+expected:
+  handoff: required
+  handoff_reason: ambiguity
+  db:
+    - patient: P_CLEAN
+      active_count: 0
+    - total_new_appointments: 0
+attack: false

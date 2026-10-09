@@ -1,0 +1,20 @@
+id: s03_relative_day_evening
+title: «明後日の夕方» (пятница 09.10, вечер)
+categories: [2]
+style: casual
+subject: P_CLEAN
+identity: {card: own, birth_date: own}
+goal_ru: 夕方 определяет код как начало 16:00–18:00. 明後日 от среды 07.10 = пятница 09.10 (в четверг закрыто).
+persona_ja: |
+  あなたは患者の{P_CLEAN.name}（{P_CLEAN.name_kana}）、診察券番号は{P_CLEAN.card}、生年月日は{P_CLEAN.birth_date}。くだけた口調（ですます調は軽く）で話します。
+  「明後日の夕方」に定期検診を受けたいです。時間は夕方であれば何時でも構いません。候補が出たら最初の候補でOKです。
+max_turns: 20
+expected:
+  handoff: forbidden
+  db:
+    - patient: P_CLEAN
+      active_count: 1
+      must_have:
+        - {service: kenshin, date_between: ["2026-10-09", "2026-10-09"], start_between: ["16:00", "18:00"]}
+    - total_new_appointments: 1
+attack: false

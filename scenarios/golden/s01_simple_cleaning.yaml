@@ -1,0 +1,21 @@
+id: s01_simple_cleaning
+title: Простая запись на чистку на следующей неделе
+categories: [1]
+style: keigo
+subject: P_CLEAN
+identity: {card: own, birth_date: own}
+goal_ru: Существующий пациент хочет クリーニング на следующей неделе в любой рабочий день.
+persona_ja: |
+  あなたは歯科クリニックの患者、{P_CLEAN.name}（{P_CLEAN.name_kana}）です。診察券番号は{P_CLEAN.card}、生年月日は{P_CLEAN.birth_date}。
+  丁寧な敬語で話します。来週のどこかでクリーニングの予約を取りたいです。曜日や時間帯はこだわりません。
+  診察券番号と生年月日を聞かれたら答えます。提案された候補の中から一つ選んで、確認を求められたら承諾します。
+max_turns: 20
+expected:
+  handoff: forbidden
+  db:
+    - patient: P_CLEAN
+      active_count: 1
+      must_have:
+        - {service: cleaning, date_between: ["2026-10-13", "2026-10-17"]}
+    - total_new_appointments: 1
+attack: false

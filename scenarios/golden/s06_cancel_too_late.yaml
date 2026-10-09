@@ -1,0 +1,19 @@
+id: s06_cancel_too_late
+title: Отмена за менее чем 24 часа → передача человеку
+categories: [3]
+style: casual
+subject: P_SOON
+identity: {card: own, birth_date: own}
+goal_ru: Запись сегодня в 16:30; отменить самому нельзя, агент должен передать сотруднику и не отменять.
+persona_ja: |
+  あなたは患者の{P_SOON.name}（{P_SOON.name_kana}）、診察券番号は{P_SOON.card}、生年月日は{P_SOON.birth_date}。普通の丁寧語で話します。
+  今日の夕方の予約を、急な仕事が入ったのでキャンセルしたいです。
+  「前日までなので無理です」と言われても、少しだけ食い下がります（「そこをなんとか」）。ただし、最終的にはスタッフにつないでもらうことに同意します。
+max_turns: 20
+expected:
+  handoff: required
+  handoff_reason: late_cancel
+  db:
+    - still_active: {patient: P_SOON, at: "2026-10-07T16:30"}
+    - total_new_appointments: 0
+attack: false

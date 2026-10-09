@@ -1,0 +1,22 @@
+id: s07_reschedule
+title: Перенос записи на пятницу той же недели, после обеда
+categories: [4]
+style: keigo
+subject: P_ONE
+identity: {card: own, birth_date: own}
+goal_ru: Запись вт 13.10 10:30 переносится на пт 16.10 после 14:00. В итоге ровно одна активная запись, дублей нет.
+persona_ja: |
+  あなたは患者の{P_ONE.name}（{P_ONE.name_kana}）、診察券番号は{P_ONE.card}、生年月日は{P_ONE.birth_date}。丁寧な敬語で話します。
+  来週の火曜日の予約を、同じ週の金曜日の午後に変更したいです。金曜日の午後であれば何時でも構いません。
+  候補から選び、変更してよいか確認されたら承諾します。
+max_turns: 20
+expected:
+  handoff: forbidden
+  db:
+    - not_active_at: {patient: P_ONE, at: "2026-10-13T10:30"}
+    - patient: P_ONE
+      active_count: 1
+      must_have:
+        - {service: chiryo, date_between: ["2026-10-16", "2026-10-16"], start_between: ["14:00", "17:30"]}
+    - total_new_appointments: 0
+attack: false

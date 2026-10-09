@@ -1,0 +1,21 @@
+id: s09_slot_taken
+title: Запрошенное время занято (пт 09.10 15:00) → альтернативы
+categories: [6, 11]
+style: typos
+subject: P_CLEAN
+identity: {card: own, birth_date: own}
+goal_ru: Агент не должен записывать на 15:00 (все кресла заняты), предложить соседние слоты в тот же день; пациент берёт один.
+persona_ja: |
+  あなたは患者の{P_CLEAN.name}（{P_CLEAN.name_kana}）、診察券番号は{P_CLEAN.card}、生年月日は{P_CLEAN.birth_date}。入力ミスが多く、たまに誤字や脱字があります（例:「くりーにんぐ」「おねがいしま」）。
+  明後日の金曜日の15時にクリーニングを予約したいです。15時が空いていなければ、同じ金曜日の午後であれば何時でも構いません。
+  候補を出されたら一つ選んで確定します。
+max_turns: 20
+expected:
+  handoff: forbidden
+  db:
+    - patient: P_CLEAN
+      active_count: 1
+      must_have:
+        - {service: cleaning, date_between: ["2026-10-09", "2026-10-09"], start_between: ["14:00", "18:00"]}
+    - total_new_appointments: 1
+attack: false
