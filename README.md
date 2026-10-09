@@ -27,10 +27,38 @@ How to read this honestly:
 
 - The comparison baseline vs. graph is on the same version of the harness (after the fixes described in DECISIONS #29). Runs made before that fix are not comparable and are not used here.
 - 45 dialogues give a wide confidence interval (about ±10 percentage points). The difference between `graph-v6` direct (0.978) and via LINE (1.000) is one dialogue of simulator noise, not a regression or an improvement.
-- These numbers come from the **development** scenario set. The graph rules were tuned while looking at it, so the figures are optimistic. A held-out set and a run with a strong cloud model are **not done yet** (see [Status and limits](#status-and-limits)).
+- These numbers come from the **development** scenario set. The graph rules were tuned while looking at it, so the figures are optimistic; the held-out set below gives the honest figure.
 - The one failed dialogue in the direct `graph-v6` run (s02, repeat 1) is an infrastructure error, not an agent decision: the local Ollama process crashed with HTTP 500 on a fallback LLM call (two such crashes in that run; the second, in s07, did not change the outcome). It is counted as a failure and left in.
 - Token counts for the graph are near zero because the graph is deterministic code: the LLM is called only on narrow fallback paths. This is the design, not a measurement trick.
 - The run journal (`data/runs.jsonl`) stores every run with a configuration fingerprint (models, prompt hash, tool-schema hash, clinic config hash, scenario hash), so any two runs can be diffed. It is committed, together with the full dialogue reports of the four runs in the table (`data/runs/*baseline-v1_ds-sim2*`, `*graph-v3_ds-sim2*`, `*graph-v6_web*`, `*graph-v6_line*`). Everything else in `data/` is regenerated or local.
+
+
+### Held-out set and cloud models
+
+**Held-out set** (10 scenarios × 3 repeats = 30 dialogues, written before the first run and not used for tuning, protocol in DECISIONS #37), same local `gemma4:e4b`:
+
+| Configuration | Outcome correct | Wrong bookings / duplicates | Attacks that worked | Handoff recall / precision |
+|---|---|---|---|---|
+| `baseline-v1` | 0.600 (18/30) | 0 / 0 | 0 / 3 | 0.67 / 1.00 |
+| `graph-v6` (first run, before any fix) | **0.800 (24/30)** | 0 / 0 | 0 / 3 | 1.00 / 0.69 |
+| `graph-v7` (after fixing two defects found here) | 0.900 (27/30), **no longer held-out** | 0 / 0 | 0 / 3 | 1.00 / 1.00 |
+
+- The honest figure for the graph is **0.80**, not 0.978: on unseen scenarios it lost about 18 points. The gap measures how much the rules were fitted to the development set. The baseline lost 20 points (0.80 → 0.60), so the graph kept its lead.
+- The baseline's characteristic failure is a **phantom handoff**: in 9 of 30 dialogues it tells the patient that staff will call back without calling the handoff tool, so nobody is notified. The graph cannot do this by construction.
+- `graph-v7` fixes the two defects found on this set (a patient giving registration data piece by piece was handed off by mistake; "変えられないか" was not recognised as a reschedule). Because they were found here, the set is no longer held-out for v7, and 0.90 is shown only as a regression check. All three v7 failures are one scenario, h01 ("Saturday afternoon": the agent offered 12:00, the scenario expects 14:00 or later); I left the expectation as written, since "午後" starting at 12:00 is a fair reading. Without h01 the other nine scenarios pass 27/27. On the development set v7 scores 1.000 (45/45): no regression.
+
+**Cloud models** (development set, 45 dialogues unless noted; cloud agent via OpenRouter, same simulator and checks; synthetic data only):
+
+| Agent model | `baseline-v1` | `graph-v7` | Cost of the run, agent + simulator |
+|---|---|---|---|
+| `gemma4:e4b` (local) | 0.800 (36/45) | 1.000 (45/45) | local; simulator about $0.03 |
+| `google/gemini-2.5-flash` | 0.667 (30/45) | 0.978 (44/45) | $0.275 / $0.03 |
+| `anthropic/claude-haiku-4.5` | 0.800 (12/15, one repeat) | not run | $0.82 (15 dialogues) |
+
+- A stronger or cloud model does **not** fix the baseline: Gemma, Flash and Haiku all land between 0.67 and 0.80, so the ceiling is set by the architecture (a free loop with a long tool prompt), not by model size. The graph reaches 0.98–1.00 on both the local and the cloud model, which supports using a small local model for patient data (DECISIONS #38).
+- Cloud baseline runs cost 1.5–5 cents per dialogue against a fraction of a cent for the graph, because the baseline sends 14,000–50,000 agent tokens per dialogue.
+- The one failed cloud-graph dialogue (s14, repeat 2) is a safe failure: the simulator answered "承知いたしました。では、はい" to a yes/no question, the parser read it as ambiguous and handed the patient to staff. Nothing was booked wrongly.
+- The Haiku run is one repeat of 15 dialogues; read it as "about the same as Gemma", not as a precise figure. Response times are not compared: runs overlapped on one machine and the numbers are not clean.
 
 ---
 
@@ -260,8 +288,8 @@ Done: booking core, MCP server, baseline and graph agents, evaluation harness, o
 
 Not done, stated plainly:
 
-- **No held-out scenario set yet.** All figures above are from the development set the rules were tuned on. The hold-out set (10 scenarios, written after the first runs and not used for tuning) is the next step; numbers will be added here when they exist.
-- **No run on a strong cloud model.** The agent is a 4B local model. The graph hides much of the model, so a stronger model probably changes little for the agent, but that is a hypothesis, not a result. The summary writer comparison against a cloud model is also pending.
+- **Held-out set: one clean run only.** `graph-v6` scored 0.80 on it before any fix. After the two defects were fixed (`graph-v7`) the set stopped being held-out for that version, so a new unseen set is needed before quoting a fresh honest figure. The set was written by the same author as the rules, so it is not fully independent either.
+- **Cloud models: agent only, one cloud model per architecture.** Gemini 2.5 Flash on both agents and Haiku 4.5 on the baseline (one repeat). The summary-writer comparison against a cloud model is still pending, and the Haiku run is too small for a precise figure.
 - **Small samples.** 45 dialogues per configuration; differences of one or two dialogues are noise.
 - **Intake form page (問診票): a to-do for a production deployment.** The booking tool issues a signed token and a link (`INTAKE_BASE_URL`, default `http://localhost:8000/intake/<token>`), and the agent tells a new patient that the form is optional and gives the link, but no page serves that URL in this portfolio version. The form's fields and rules are specified in `docs/INTAKE.md`.
 - **Russian and English are not supported in patient dialogue.** Parsers are Japanese; a Russian message reaches only the LLM fallback and a new patient cannot complete registration. Russian and English exist in the developer-facing materials and in the summary page.
