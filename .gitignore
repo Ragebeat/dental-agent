@@ -22,6 +22,8 @@ data/runs/*
 !data/runs/*graph-v3_ds-sim2.json
 !data/runs/*graph-v6_web.json
 !data/runs/*graph-v6_line.json
+!data/runs/*holdout_graph-v6.json
+!data/runs/*holdout_baseline-v1.json
 
 # Local scratch
 runs/tmp/
