@@ -197,3 +197,32 @@ def test_exact_time_missing_offers_same_day_neighbours_first():
     d = Dialog(FakeClinic(slots={"2026-10-09": ["14:00", "16:00"], "2026-10-10": ["15:00"]}))
     r = d.say(ID + "明後日の金曜の15時にクリーニングの予約をお願いします")
     assert "空きがございませんでした" in r and "10月9日（金）14:00" in r and "10月9日（金）16:00" in r and "10月10日" in r
+
+
+def test_stepwise_registration_is_not_handed_off():
+    """h10: пациент сообщает данные по частям — это прогресс, а не неясность."""
+    d = Dialog()
+    d.say("初めての予約をお願いします。来週の金曜日の午後に初診を入れたいです")
+    d.say("山本 美咲と申します。")
+    d.say("ふりがなは、やまもと みさきです。")
+    r = d.say("電話番号は070-0000-0006です。")
+    assert "生年月日" in r and not d.clinic.handoffs and d.clinic.registered is None
+    d.say("1995年5月17日です。")
+    assert d.clinic.registered["name"] == "山本 美咲" and d.clinic.registered["birth_date"] == "1995-05-17"
+    assert not d.clinic.handoffs
+
+
+def test_registration_prompt_asks_only_missing_fields():
+    d = Dialog()
+    d.say("初めての予約をお願いします。初診を入れたいです")
+    r = d.say("山本 美咲と申します。")
+    assert "ふりがな" in r and "お電話番号" in r and "生年月日" in r and "お名前" not in r.split("あと、")[-1]
+
+
+def test_registration_still_handed_off_without_progress():
+    d = Dialog()
+    d.say("初めての予約をお願いします。初診を入れたいです")
+    d.say("えっと")
+    d.say("うーん")
+    d.say("さあ")
+    assert d.clinic.handoffs and d.clinic.registered is None

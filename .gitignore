@@ -27,3 +27,8 @@ data/runs/*
 
 # Local scratch
 runs/tmp/
+!data/runs/*graph-v7.json
+!data/runs/*holdout_graph-v7.json
+!data/runs/*cloud_graph-v7.json
+!data/runs/*cloud_baseline-v1.json
+!data/runs/*cloud-haiku_baseline-v1.json

@@ -97,3 +97,16 @@ def test_bare_digit_at_start_is_a_choice_but_not_a_date():
     opts = [{"date": "2026-10-16", "time": "10:00"}, {"date": "2026-10-16", "time": "14:00"}]
     assert parse_choice("1だって言ってるだろ", opts) == 0
     assert parse_choice("10/16の14時で", opts) == 1
+
+
+def test_reschedule_wording_henerarenai():
+    assert parse_action("来週の火曜日の予約を、水曜日の午前中に変えられないかな") == "reschedule"
+
+
+def test_spaced_name_with_kana_and_piecewise_parts():
+    from dental.agent.understand import parse_reg_part
+    assert parse_name_kana("山本 美咲（やまもと みさき）です") == ("山本 美咲", "やまもと みさき")
+    assert parse_reg_part("山本 美咲と申します。", ["name", "name_kana"]).get("name") == "山本 美咲"
+    assert parse_reg_part("ふりがなは、やまもと みさきです。", ["name_kana"]).get("name_kana") == "やまもと みさき"
+    for t in ("初診でお願いします", "来週の金曜日の午後", "はい"):
+        assert parse_reg_part(t, ["name", "name_kana"]) == {}

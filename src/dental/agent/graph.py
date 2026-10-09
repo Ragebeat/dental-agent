@@ -25,10 +25,12 @@ from dental.agent.baseline import TokenCapReached, Usage
 from dental.agent.dates import DateIntent, parse_ja, resolve
 from dental.agent.llm import LLM
 from dental.agent.understand import (NEW_PATIENT, has_date_info, merge_intent, norm, parse_action, parse_birth, parse_card,
-                                     parse_choice, parse_flags, parse_name_kana, parse_phone, parse_service, parse_yesno)
+                                     parse_choice, parse_flags, parse_name_kana, parse_phone, parse_reg_part, parse_service,
+                                     parse_yesno)
 
-GRAPH_VERSION = "graph-v6"
+GRAPH_VERSION = "graph-v7"
 WD = "月火水木金土日"
+REG_LABEL = {"name": "お名前（漢字）", "name_kana": "ふりがな", "phone": "お電話番号", "birth_date": "生年月日（西暦）"}
 MAX_ASKS = 2                       # после двух уточнений по одному и тому же — передача человеку
 THANKS = re.compile(r"ありがとう|了解|承知|助かり|失礼|よろしくお願いいたします")
 FALLBACK = "申し訳ございません、うまく処理できませんでした。担当スタッフから改めてご連絡いたします。"
@@ -38,6 +40,7 @@ SAY = {
     "ask_id": "ご本人様確認のため、診察券番号（6桁）と生年月日（西暦）をお知らせください。初めてご利用の方は「初めて」とお伝えください。",
     "ask_id_again": "診察券番号と生年月日が一致しませんでした。恐れ入りますが、もう一度ご確認のうえお知らせください。",
     "ask_reg": "初めてのご利用ですね。お名前（漢字）、ふりがな、お電話番号、生年月日（西暦）を教えてください。",
+    "ask_reg_more": "ありがとうございます。あと、{fields}を教えてください。",
     "ask_action": "ご用件をお知らせください（ご予約・日時の変更・キャンセル）。",
     "ask_service": "ご希望の診療内容をお知らせください（治療・クリーニング・定期検診）。",
     "ask_date": "ご希望の日にちと時間帯をお知らせください（例：来週の火曜の午前）。",
@@ -93,6 +96,7 @@ class S(TypedDict, total=False):
     card: int | None
     birth: str | None
     reg: dict
+    reg_need: int                # сколько полей регистрации не хватало на прошлом вопросе (рост заполненности сбрасывает счётчик уточнений)
     wants_new: bool
     is_new: bool                 # зарегистрирован в этом диалоге → доступна только 初診
     id_fails: int
@@ -292,6 +296,9 @@ class GraphAgent:
                 reg["name"], reg["name_kana"] = nk
             if b:
                 reg["birth_date"] = b
+            if (s.get("wants_new") or u.get("wants_new")) and not (reg.get("name") and reg.get("name_kana")):
+                for k, v in parse_reg_part(text, [k for k in ("name", "name_kana") if not reg.get(k)]).items():
+                    reg.setdefault(k, v)                        # пошаговая регистрация: имя и чтение приходят отдельными репликами
             u["reg"] = reg
             if (s.get("wants_new") or u.get("wants_new")) and not (reg.get("name") and reg.get("name_kana")) and len(text) > 6 \
                     and (reg.get("phone") or reg.get("birth_date")):
@@ -369,10 +376,17 @@ class GraphAgent:
         if s.get("wants_new"):
             need = [k for k in ("name", "name_kana", "phone", "birth_date") if not reg.get(k)]
             if need:
+                prev = s.get("reg_need")
+                if prev is not None and len(need) < prev:           # пациент продвинулся: это не повтор вопроса, счётчик не растёт
+                    s = {**s, "asks": {**(s.get("asks") or {}), "reg": 0}}
                 asks, over = self._ask(s, "reg")
                 if over:
                     return {"asks": asks, "handoff_reason": "ambiguity"}
-                return self._out(s, SAY["ask_reg"], asks=asks)
+                if len(need) == 4:
+                    say = SAY["ask_reg"]
+                else:                                                # спрашиваем только недостающее
+                    say = SAY["ask_reg_more"].format(fields="、".join(REG_LABEL[k] for k in need))
+                return self._out(s, say, asks=asks, reg_need=len(need))
             res = await self._tool("register_new_patient", {"name": reg["name"], "name_kana": reg["name_kana"],
                                                             "phone": reg["phone"], "birth_date": reg["birth_date"]})
             if res.get("ok"):

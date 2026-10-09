@@ -51,13 +51,42 @@ _NAME_PREFIX = re.compile(r"^(?:私は|わたしは|名前は|お名前は|氏�
 
 
 def parse_name_kana(text: str) -> tuple[str, str] | None:
-    """«山本美咲（やまもと みさき）» → ('山本美咲', 'やまもと みさき'). Без скобок не угадываем — это работа LLM-запасного пути."""
-    m = re.search(r"([^\s（(、,。\n「」]{2,10})\s*[（(]\s*([ぁ-んァ-ヶー][ぁ-んァ-ヶー\s　]{1,20})\s*[）)]", text)
+    """«山本美咲（やまもと みさき）», «山本 美咲（やまもと みさき）» → имя и чтение. Без скобок не угадываем: см. parse_reg_part и LLM-запасной путь."""
+    m = re.search(r"((?:[^\s（(、,。\n「」]{1,8}[ \u3000]+)?[^\s（(、,。\n「」]{1,10})\s*[（(]\s*([ぁ-んァ-ヶー][ぁ-んァ-ヶー\s\u3000]{1,20})\s*[）)]", text)
     if not m:
         return None
     name = _NAME_PREFIX.sub("", m.group(1)).strip()
-    kana = to_hiragana(re.sub(r"[\s　]+", " ", m.group(2)).strip())
-    return (name, kana) if len(name) >= 2 else None
+    parts = re.split(r"[ \u3000]+", name)
+    if len(parts) >= 2:                                   # «山本 美咲» — фамилия и имя; лишнее слово перед ними («こんにちは 山本美咲») отбрасываем
+        name = " ".join(parts[-2:]) if all(len(x) <= 4 for x in parts[-2:]) and len(parts) == 2 else parts[-1]
+    kana = to_hiragana(re.sub(r"[\s\u3000]+", " ", m.group(2)).strip())
+    return (name, kana) if len(name.replace(" ", "")) >= 2 else None
+
+
+# Пошаговая регистрация: пациент отвечает на вопрос одним полем («山本 美咲と申します», «ふりがなは、やまもと みさきです»).
+_KANA_LABEL = re.compile(r"(?:ふりがな|フリガナ|ふり仮名|振り仮名|よみがな|読み方)\s*(?:は|を)?\s*[:：、,，]?\s*"
+                         r"([ぁ-んァ-ヶー][ぁ-んァ-ヶー \u3000]{1,20}?)\s*(?:です|と申します|といいます|でございます|[。．、,，]|$)")
+_TAIL = re.compile(r"\s*(?:と申します|といいます|と言います|でございます|です)?[。．.!！]*\s*$")
+_NAME_SHAPE = re.compile(r"^[一-鿿々]{1,4}[ \u3000]?[一-鿿々ぁ-ん]{1,4}$")
+_NOT_NAME = re.compile(r"予約|診|検|治療|変更|取消|曜|午前|午後|今日|明日|来週|今週|初め|お願い|電話|番号|生年|相談|質問|診察券")
+_NOT_KANA = re.compile(r"ありがとう|すみません|ください|ありません|いいえ|はい|ます|です|ません|おねがい|よろしく|こんにちは|はじめ")
+
+
+def parse_reg_part(text: str, need: list[str]) -> dict:
+    """Одно поле из ответа на вопрос о регистрации. need — какие из name / name_kana ещё не заполнены. Только очевидные формы."""
+    t = norm(text).strip()
+    out: dict[str, str] = {}
+    rest = t
+    if "name_kana" in need and (m := _KANA_LABEL.search(t)):
+        out["name_kana"] = to_hiragana(re.sub(r"[ \u3000]+", " ", m.group(1)).strip())
+        rest = (t[:m.start()] + " " + t[m.end():]).strip(" 、,。")
+    cand = _TAIL.sub("", _NAME_PREFIX.sub("", rest.strip())).strip(" 、,。")
+    if "name" in need and cand and len(cand) <= 12 and _NAME_SHAPE.match(cand) and not _NOT_NAME.search(cand):
+        out["name"] = re.sub(r"[ \u3000]+", " ", cand)
+    elif ("name" not in need and "name_kana" in need and "name_kana" not in out
+          and re.fullmatch(r"[ぁ-んァ-ヶー \u3000]{3,24}", cand) and not _NOT_KANA.search(cand)):
+        out["name_kana"] = to_hiragana(re.sub(r"[ \u3000]+", " ", cand))
+    return out
 
 
 NEW_PATIENT = re.compile(r"初めて|はじめて|初診|新規|新患|診察券(?:は)?(?:持っていません|ありません|ない|を持っていない)|カード(?:は)?(?:持っていません|ありません)")
@@ -65,7 +94,7 @@ NEW_PATIENT = re.compile(r"初めて|はじめて|初診|新規|新患|診察券
 
 # ---------- намерение ----------
 _CANCEL = re.compile(r"キャンセル|取り消|取消|やめたい|行けなくな|行けない")
-_RESCHEDULE = re.compile(r"変更|変えたい|変えて|ずらし|振替|振り替え|日にちを変|別の日|移したい|リスケ|延期")
+_RESCHEDULE = re.compile(r"変更|変えたい|変えて|変えられ|変えれ|変わりたい|ずらし|ずらせ|振替|振り替え|日にちを変|別の日|移したい|動かし|リスケ|延期")
 _BOOK = re.compile(r"予約|取りたい|入れたい|入れて|お願いしたい|診てもらい|見てもらい|受けたい|行きたい")
 
 
