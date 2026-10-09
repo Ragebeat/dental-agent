@@ -20,14 +20,16 @@ max_tokens = 1024
 # Пример облачного профиля через OpenRouter: раскомментировать, поставить OPENROUTER_API_KEY в .env,
 # выбрать модель на openrouter.ai/models (нужна поддержка tools), и запускать:
 #   uv run python -m dental.eval.run --agent-profile or_agent --sim-profile local
-# [profiles.or_agent]
-# base_url = "https://openrouter.ai/api/v1"
-# model = "google/gemini-2.5-flash"
-# api_key_env = "OPENROUTER_API_KEY"
-# temperature = 0.0
-# timeout_s = 120
-# max_tokens = 1024
-# extra_body = { usage = { include = true } }   # OpenRouter вернёт стоимость запроса в usage.cost
+# Облачный агент для сравнения «локальная модель vs облачная» (E8, только синтетические данные).
+# Слаг сверить на openrouter.ai/models (нужна поддержка tools).
+[profiles.or_agent]
+base_url = "https://openrouter.ai/api/v1"
+model = "google/gemini-2.5-flash"
+api_key_env = "OPENROUTER_API_KEY"
+temperature = 0.0
+timeout_s = 120
+max_tokens = 1024
+extra_body = { usage = { include = true } }   # OpenRouter вернёт стоимость запроса в usage.cost
 
 # Симулятор пациента: сильная модель, чтобы диалог держал роль (gemma 4B в первом прогоне путала роль в 5 сценариях).
 # Слаг сверить на openrouter.ai/models. Ключ OPENROUTER_API_KEY лежит в .env.
