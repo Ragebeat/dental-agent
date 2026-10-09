@@ -15,6 +15,7 @@ from dental.config import ROOT, ClinicConfig
 from dental.synth import fixtures as fx
 
 SCENARIO_DIR = ROOT / "scenarios" / "golden"
+HOLDOUT_DIR = ROOT / "scenarios" / "holdout"      # отложенный набор: не участвует в настройке агента (docs/DECISIONS.md №37)
 STYLES = {"keigo", "casual", "rude", "typos", "halfwidth", "vague"}
 REASONS = {"medical", "ambiguity", "late_cancel", "manipulation", "complaint", "tool_errors", "other"}
 DB_KEYS = {

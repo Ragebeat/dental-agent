@@ -24,7 +24,7 @@ from dental.core.db import connect, database_url
 from dental.core.loader import build_template, drop_database, unique_name
 from dental.eval.metrics import compute
 from dental.eval.runner import RunSettings, run_scenario
-from dental.scenarios import load_scenarios
+from dental.scenarios import HOLDOUT_DIR, SCENARIO_DIR, load_scenarios
 from dental.synth.generate import build_snapshot
 
 RUNS_DIR = ROOT / "data" / "runs"
@@ -80,12 +80,14 @@ def main(argv=None) -> None:
     ap.add_argument("--keep-db", action="store_true")
     ap.add_argument("--channel", choices=["web", "line"], default="web", help="web: агент вызывается напрямую; line: реплики идут через вебхук LINE (E7, нужен --agent graph)")
     ap.add_argument("--trace", action="store_true", help="слать трассы в Phoenix (127.0.0.1:6006, проект dental-agent); по умолчанию выключено")
+    ap.add_argument("--set", choices=["golden", "holdout"], default="golden", dest="scenario_set",
+                    help="golden: набор разработки; holdout: отложенный набор (прогонять только на замороженной версии агента)")
     ap.add_argument("--agent", choices=["baseline", "graph"], default="baseline", help="реализация агента: baseline (ReAct) или graph (LangGraph, E4)")
     a = ap.parse_args(argv)
 
     tracing.setup(enable=a.trace)
     cfg = load_config()
-    scenarios = load_scenarios()
+    scenarios = load_scenarios(HOLDOUT_DIR if a.scenario_set == "holdout" else SCENARIO_DIR)
     if a.scenarios:
         pref = [p.strip() for p in a.scenarios.split(",") if p.strip()]
         scenarios = [s for s in scenarios if any(s.id.startswith(p) for p in pref)]
@@ -105,6 +107,8 @@ def main(argv=None) -> None:
     build_template(admin_url, tpl, build_snapshot(cfg))
     try:
         fp = fingerprint(agent_llm, sim_llm, cfg, scenarios, settings, _tools_hash(admin_url, tpl))
+        if a.scenario_set != "golden":
+            fp["scenario_set"] = a.scenario_set               # только для не-golden: отпечатки старых прогонов остаются сопоставимыми
         run_id = datetime.now(ZoneInfo("Asia/Tokyo")).strftime("%Y%m%d-%H%M%S") + (f"-{a.label}" if a.label else "")
         jobs = [(sc, r) for r in range(1, a.repeats + 1) for sc in scenarios]
         print(f"run {run_id}: {len(scenarios)} сценариев × {a.repeats}; агент {agent_llm.profile.model}, "

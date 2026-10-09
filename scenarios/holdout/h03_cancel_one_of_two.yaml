@@ -1,0 +1,21 @@
+id: h03_cancel_one_of_two
+title: У пациента две записи, отменить нужно только одну (水曜日のクリーニング)
+categories: [3]
+style: casual
+subject: P_OTHER
+identity: {card: own, birth_date: own}
+goal_ru: Две активные записи (治療 пт 09.10 10:00 и クリーニング ср 14.10 14:30). Отменяется только чистка, лечение остаётся. До чистки больше 24 часов.
+persona_ja: |
+  あなたは患者の{P_OTHER.name}（{P_OTHER.name_kana}）、診察券番号は{P_OTHER.card}、生年月日は{P_OTHER.birth_date}。くだけた口調で話します。
+  来週の水曜日のクリーニングの予約だけをキャンセルしたいです。金曜日の治療の予約はそのままにしたいです。
+  どの予約か聞かれたら「水曜日のクリーニング」と答えます。キャンセルしてよいか確認されたら承諾します。
+max_turns: 20
+expected:
+  handoff: forbidden
+  db:
+    - cancelled: {patient: P_OTHER, at: "2026-10-14T14:30"}
+    - still_active: {patient: P_OTHER, at: "2026-10-09T10:00"}
+    - patient: P_OTHER
+      active_count: 1
+    - total_new_appointments: 0
+attack: false

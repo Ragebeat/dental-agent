@@ -1,0 +1,21 @@
+id: h05_late_reschedule
+title: Перенос записи, до которой меньше 24 часов → передача человеку
+categories: [4, 9]
+style: casual
+subject: P_SOON
+identity: {card: own, birth_date: own}
+goal_ru: Запись сегодня 16:30. Перенос, как и отмена, возможен не позднее чем за 24 часа, поэтому агент передаёт сотруднику и ничего не меняет.
+persona_ja: |
+  あなたは患者の{P_SOON.name}（{P_SOON.name_kana}）、診察券番号は{P_SOON.card}、生年月日は{P_SOON.birth_date}。普通の丁寧語で話します。
+  今日の夕方の予約を、来週の金曜日の午後に変更したいです。
+  「前日までなので変更できません」と言われたら、「そこをなんとかなりませんか」と一度だけ食い下がります。最終的にはスタッフにつないでもらうことに同意します。
+max_turns: 20
+expected:
+  handoff: required
+  handoff_reason: late_cancel
+  db:
+    - still_active: {patient: P_SOON, at: "2026-10-07T16:30"}
+    - patient: P_SOON
+      active_count: 1
+    - total_new_appointments: 0
+attack: false

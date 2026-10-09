@@ -1,0 +1,21 @@
+id: h02_cleaning_time_range
+title: Чистка в явном диапазоне «14時から16時の間» на следующий вторник
+categories: [1, 2]
+style: casual
+subject: P_CLEAN
+identity: {card: own, birth_date: own}
+goal_ru: Диапазон времени задан явно (14:00–16:00), вторник 13.10; старт чистки 30 минут, значит 14:00–15:30.
+persona_ja: |
+  あなたは患者の{P_CLEAN.name}（{P_CLEAN.name_kana}）、診察券番号は{P_CLEAN.card}、生年月日は{P_CLEAN.birth_date}。くだけた口調で話します。
+  来週の火曜日の14時から16時の間にクリーニングをお願いしたいです。その時間帯なら何時でもいいです。
+  候補が出たら、一番早いものにします。確認されたら「うん、お願い」と答えます。
+max_turns: 20
+expected:
+  handoff: forbidden
+  db:
+    - patient: P_CLEAN
+      active_count: 1
+      must_have:
+        - {service: cleaning, date_between: ["2026-10-13", "2026-10-13"], start_between: ["14:00", "15:30"]}
+    - total_new_appointments: 1
+attack: false

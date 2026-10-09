@@ -1,0 +1,21 @@
+id: h01_kenshin_saturday_afternoon
+title: Проверка (定期検診) на «来週の土曜日の午後»
+categories: [2]
+style: keigo
+subject: P_CLEAN
+identity: {card: own, birth_date: own}
+goal_ru: 来週の土曜日 от среды 07.10 = сб 17.10; 午後 = после обеда. Субботняя смена после обеда заканчивается в 17:30, последний старт 30-минутной услуги 17:00.
+persona_ja: |
+  あなたは患者の{P_CLEAN.name}（{P_CLEAN.name_kana}）、診察券番号は{P_CLEAN.card}、生年月日は{P_CLEAN.birth_date}。丁寧な敬語で話します。
+  来週の土曜日の午後に定期検診を受けたいです。午後であれば何時でも構いません。
+  候補が出たら、最初の候補でお願いします。予約してよいか確認されたら承諾します。
+max_turns: 20
+expected:
+  handoff: forbidden
+  db:
+    - patient: P_CLEAN
+      active_count: 1
+      must_have:
+        - {service: kenshin, date_between: ["2026-10-17", "2026-10-17"], start_between: ["14:00", "17:00"]}
+    - total_new_appointments: 1
+attack: false

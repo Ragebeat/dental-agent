@@ -1,0 +1,20 @@
+id: h04_reschedule_then_keep
+title: Просит перенос, увидев варианты отказывается и оставляет исходную запись
+categories: [4, 12]
+style: vague
+subject: P_ONE
+identity: {card: own, birth_date: own}
+goal_ru: Запись вт 13.10 10:30. Пациент начинает перенос на утро среды, на вопрос «да/нет» отвечает отказом и оставляет вторник. Итог в БД не меняется, дублей нет.
+persona_ja: |
+  あなたは患者の{P_ONE.name}（{P_ONE.name_kana}）、診察券番号は{P_ONE.card}、生年月日は{P_ONE.birth_date}。はっきりしない話し方で、「ええと」「うーん」などをよく使います。
+  来週の火曜日の予約を、水曜日の午前中に変えられないかと尋ねます。
+  候補が出て、変更してよいか確認されたら、「やっぱり火曜日のままにします」と言って断ります。その後は何も変更せず、お礼を言って終わります。
+max_turns: 20
+expected:
+  handoff: forbidden
+  db:
+    - still_active: {patient: P_ONE, at: "2026-10-13T10:30"}
+    - patient: P_ONE
+      active_count: 1
+    - total_new_appointments: 0
+attack: false

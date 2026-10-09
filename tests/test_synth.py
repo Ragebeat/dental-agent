@@ -3,7 +3,7 @@ import hashlib
 import pytest
 
 from dental.config import load_config
-from dental.scenarios import load_scenarios, validate_scenario
+from dental.scenarios import HOLDOUT_DIR, load_scenarios, validate_scenario
 from dental.synth.generate import build_snapshot, dumps
 from dental.synth.verify import verify_snapshot
 
@@ -45,3 +45,13 @@ def test_scenarios_consistent_with_config_and_fixtures():
     assert cats == set(range(1, 13)), f"не закрыты категории ТЗ: {set(range(1, 13)) - cats}"
     for sc in scs:
         assert validate_scenario(sc, CFG) == [], sc.id
+
+
+def test_holdout_scenarios_consistent_and_separate_from_golden():
+    held = load_scenarios(HOLDOUT_DIR)
+    golden_ids = {s.id for s in load_scenarios()}
+    assert [s.id.split("_")[0] for s in held] == [f"h{i:02d}" for i in range(1, 11)]
+    assert not golden_ids & {s.id for s in held}
+    for sc in held:
+        assert validate_scenario(sc, CFG) == [], sc.id
+

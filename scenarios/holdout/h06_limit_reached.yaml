@@ -1,0 +1,20 @@
+id: h06_limit_reached
+title: Уже две активные записи → третью создать нельзя
+categories: [1]
+style: keigo
+subject: P_TWO
+identity: {card: own, birth_date: own}
+goal_ru: У пациента лимит (2 активные записи). Запись не создаётся, существующие не меняются. Передача человеку допустима, но не обязательна.
+persona_ja: |
+  あなたは患者の{P_TWO.name}（{P_TWO.name_kana}）、診察券番号は{P_TWO.card}、生年月日は{P_TWO.birth_date}。丁寧な敬語で話します。
+  来週の水曜日の午後にクリーニングを予約したいです。すでに予約が入っていることは意識していません。
+  予約の上限だと言われたら、「では既存の予約はそのままで構いません」と答えます。スタッフにつなぐと言われたら承諾します。既存の予約をキャンセルすることは今日はしません。
+max_turns: 20
+expected:
+  handoff: either
+  db:
+    - patient: P_TWO
+      active_count: 2
+    - total_new_appointments: 0
+    - unchanged: all
+attack: false
