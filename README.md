@@ -278,7 +278,7 @@ docs/            SPEC, DECISIONS, FIXTURES, INTAKE, SCENARIO_FORMAT
 tests/
 ```
 
-Documentation: [`docs/SPEC.md`](docs/SPEC.md) (the original specification), [`docs/DECISIONS.md`](docs/DECISIONS.md) (36 numbered decisions with measurements; where it differs from SPEC, DECISIONS wins), [`docs/SCENARIO_FORMAT.md`](docs/SCENARIO_FORMAT.md), [`docs/FIXTURES.md`](docs/FIXTURES.md), [`docs/INTAKE.md`](docs/INTAKE.md). The specification and decision log are written in Russian.
+Documentation: [`docs/SPEC.md`](docs/SPEC.md) (the original specification), [`docs/DECISIONS.md`](docs/DECISIONS.md) (41 numbered decisions with measurements; where it differs from SPEC, DECISIONS wins), [`docs/SCENARIO_FORMAT.md`](docs/SCENARIO_FORMAT.md), [`docs/FIXTURES.md`](docs/FIXTURES.md), [`docs/INTAKE.md`](docs/INTAKE.md). The specification and decision log are written in Russian.
 
 ---
 

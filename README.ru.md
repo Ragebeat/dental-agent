@@ -278,7 +278,7 @@ docs/            SPEC, DECISIONS, FIXTURES, INTAKE, SCENARIO_FORMAT
 tests/
 ```
 
-Документация: [`docs/SPEC.md`](docs/SPEC.md) (исходное ТЗ), [`docs/DECISIONS.md`](docs/DECISIONS.md) (36 пронумерованных решений с измерениями; при расхождении с ТЗ действует DECISIONS), [`docs/SCENARIO_FORMAT.md`](docs/SCENARIO_FORMAT.md), [`docs/FIXTURES.md`](docs/FIXTURES.md), [`docs/INTAKE.md`](docs/INTAKE.md). Исходное ТЗ и журнал решений написаны на русском.
+Документация: [`docs/SPEC.md`](docs/SPEC.md) (исходное ТЗ), [`docs/DECISIONS.md`](docs/DECISIONS.md) (41 пронумерованное решение с измерениями; при расхождении с ТЗ действует DECISIONS), [`docs/SCENARIO_FORMAT.md`](docs/SCENARIO_FORMAT.md), [`docs/FIXTURES.md`](docs/FIXTURES.md), [`docs/INTAKE.md`](docs/INTAKE.md). Исходное ТЗ и журнал решений написаны на русском.
 
 ---
 

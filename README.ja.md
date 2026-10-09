@@ -278,7 +278,7 @@ docs/            SPEC、DECISIONS、FIXTURES、INTAKE、SCENARIO_FORMAT
 tests/
 ```
 
-ドキュメント: [`docs/SPEC.md`](docs/SPEC.md)（当初の仕様）、[`docs/DECISIONS.md`](docs/DECISIONS.md)（測定値つきの番号付き決定 36 件。SPEC と食い違う場合は DECISIONS が優先）、[`docs/SCENARIO_FORMAT.md`](docs/SCENARIO_FORMAT.md)、[`docs/FIXTURES.md`](docs/FIXTURES.md)、[`docs/INTAKE.md`](docs/INTAKE.md)。仕様書と決定記録はロシア語で書かれています。
+ドキュメント: [`docs/SPEC.md`](docs/SPEC.md)（当初の仕様）、[`docs/DECISIONS.md`](docs/DECISIONS.md)（測定値つきの番号付き決定 41 件。SPEC と食い違う場合は DECISIONS が優先）、[`docs/SCENARIO_FORMAT.md`](docs/SCENARIO_FORMAT.md)、[`docs/FIXTURES.md`](docs/FIXTURES.md)、[`docs/INTAKE.md`](docs/INTAKE.md)。仕様書と決定記録はロシア語で書かれています。
 
 ---
 
