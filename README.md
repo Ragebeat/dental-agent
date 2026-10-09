@@ -161,7 +161,7 @@ The same agent answers in LINE; the agent and MCP code were not changed for it.
 <img src="docs/img/line-4-cancelled.png" width="23%" alt="LINE: reschedule done, cancellation">
 </p>
 
-*Live run on a real LINE account with a synthetic patient, in order: registration and slot offer; booking confirmed and a reschedule request; reschedule asks for confirmation; reschedule done and cancellation. The booking message contains the intake-form link, which points to `localhost`: the form page is not built yet (see Status and limits). The messages are in Japanese; the card number and token are synthetic.*
+*Live run on a real LINE account with a synthetic patient, in order: registration and slot offer; booking confirmed and a reschedule request; reschedule asks for confirmation; reschedule done and cancellation. The booking message contains the intake-form link, which points to `localhost`: the form page is a to-do for a production deployment (see Status and limits). The messages are in Japanese; the card number and token are synthetic.*
 
 ---
 
@@ -191,6 +191,7 @@ What would have to change. None of this is built; this is the list I would work 
 7. **Load.** The graph's fallback LLM call is synchronous and blocks the event loop of the webhook; it must move to a worker thread or queue. Sessions are in memory and are lost on restart.
 8. **Languages.** Rules are Japanese. Other languages go to the LLM fallback only, which is not enough for registration (see Status and limits).
 9. **Monitoring.** Alerts on handoff rate, tool-error rate, and the share of dialogues ending without a result, using the traces already produced.
+10. **Intake form page.** Build the page behind the signed link (autosave, "I will fill it in at the clinic", data never sent to an LLM), specified in `docs/INTAKE.md`.
 
 ---
 
@@ -257,7 +258,7 @@ Not done, stated plainly:
 - **No held-out scenario set yet.** All figures above are from the development set the rules were tuned on. The hold-out set (10 scenarios, written after the first runs and not used for tuning) is the next step; numbers will be added here when they exist.
 - **No run on a strong cloud model.** The agent is a 4B local model. The graph hides much of the model, so a stronger model probably changes little for the agent, but that is a hypothesis, not a result. The summary writer comparison against a cloud model is also pending.
 - **Small samples.** 45 dialogues per configuration; differences of one or two dialogues are noise.
-- **The intake form page (問診票) is not built.** The booking tool issues a signed token and a link (`INTAKE_BASE_URL`, default `http://localhost:8000/intake/<token>`), and the agent tells a new patient that the form is optional and gives the link, but nothing serves that URL yet. The form's fields and rules are specified in `docs/INTAKE.md`.
+- **Intake form page (問診票): a to-do for a production deployment.** The booking tool issues a signed token and a link (`INTAKE_BASE_URL`, default `http://localhost:8000/intake/<token>`), and the agent tells a new patient that the form is optional and gives the link, but no page serves that URL in this portfolio version. The form's fields and rules are specified in `docs/INTAKE.md`.
 - **Russian and English are not supported in patient dialogue.** Parsers are Japanese; a Russian message reaches only the LLM fallback and a new patient cannot complete registration. Russian and English exist in the developer-facing materials and in the summary page.
 - Sessions are in memory; the fallback LLM call blocks the webhook's event loop (details above).
 - Admin interface (E9) and an interface for external patient agents (E10) are planned and not started. The evening variant of the owner summary is not built.
