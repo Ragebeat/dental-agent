@@ -154,6 +154,15 @@
 - **実機での確認**（手動、HTTPS トンネル越しの本物の LINE アカウントで 1 回）: 新規患者の登録 → 予約 → 変更 → キャンセル。データベースには期待どおりの予約の連鎖が残り、重複はありませんでした。これは手動のデモであり、指標ではありません。
 - `uv run python -m dental.channels check` は、アクセストークンの LINE への照会と、署名と検証の往復を確認します。`emulate` はローカルのコンソールを、`serve` は Webhook を起動します。
 
+<p>
+<img src="docs/img/line-1-register.png" width="23%" alt="LINE: registration and slot offer">
+<img src="docs/img/line-2-booked.png" width="23%" alt="LINE: booking confirmed, reschedule requested">
+<img src="docs/img/line-3-reschedule.png" width="23%" alt="LINE: reschedule asks for confirmation">
+<img src="docs/img/line-4-cancelled.png" width="23%" alt="LINE: reschedule done, cancellation">
+</p>
+
+*実際の LINE アカウントと合成患者での実機の流れ（順に）: 登録と空き枠の提示、予約の確定と変更の依頼、変更の確認、変更の完了とキャンセル。予約完了のメッセージにある問診票のリンクは `localhost` を指しており、問診票のページはまだ実装していません（「状況と限界」を参照）。診察券番号とトークンは合成のものです。*
+
 ---
 
 ## セキュリティと個人情報

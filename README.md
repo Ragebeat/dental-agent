@@ -154,6 +154,15 @@ The same agent answers in LINE; the agent and MCP code were not changed for it.
 - **Live check** (manual, one run on a real LINE account behind an HTTPS tunnel): registration of a new patient → booking → reschedule → cancel. The database showed the expected chain and no duplicates. This is a manual demonstration, not a metric.
 - `uv run python -m dental.channels check` verifies the access token against LINE and the signature round trip. `emulate` runs a local console; `serve` starts the webhook.
 
+<p>
+<img src="docs/img/line-1-register.png" width="23%" alt="LINE: registration and slot offer">
+<img src="docs/img/line-2-booked.png" width="23%" alt="LINE: booking confirmed, reschedule requested">
+<img src="docs/img/line-3-reschedule.png" width="23%" alt="LINE: reschedule asks for confirmation">
+<img src="docs/img/line-4-cancelled.png" width="23%" alt="LINE: reschedule done, cancellation">
+</p>
+
+*Live run on a real LINE account with a synthetic patient, in order: registration and slot offer; booking confirmed and a reschedule request; reschedule asks for confirmation; reschedule done and cancellation. The booking message contains the intake-form link, which points to `localhost`: the form page is not built yet (see Status and limits). The messages are in Japanese; the card number and token are synthetic.*
+
 ---
 
 ## Security and privacy

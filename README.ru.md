@@ -154,6 +154,15 @@
 - **Живая проверка** (вручную, один прогон на настоящем аккаунте LINE за HTTPS-туннелем): регистрация нового пациента → запись → перенос → отмена. В базе получилась ожидаемая цепочка записей без дублей. Это ручная демонстрация, а не метрика.
 - `uv run python -m dental.channels check` проверяет токен доступа в LINE и круг «подписать — проверить». `emulate` запускает локальную консоль; `serve` запускает вебхук.
 
+<p>
+<img src="docs/img/line-1-register.png" width="23%" alt="LINE: registration and slot offer">
+<img src="docs/img/line-2-booked.png" width="23%" alt="LINE: booking confirmed, reschedule requested">
+<img src="docs/img/line-3-reschedule.png" width="23%" alt="LINE: reschedule asks for confirmation">
+<img src="docs/img/line-4-cancelled.png" width="23%" alt="LINE: reschedule done, cancellation">
+</p>
+
+*Живой прогон на настоящем аккаунте LINE с синтетическим пациентом, по порядку: регистрация и предложение слотов; запись подтверждена и просьба о переносе; перенос просит подтверждения; перенос выполнен и отмена. В сообщении о записи есть ссылка на анкету, она ведёт на `localhost`: страница анкеты ещё не сделана (см. «Статус и ограничения»). Сообщения на японском; номер карты и токен синтетические.*
+
 ---
 
 ## Безопасность и персональные данные
