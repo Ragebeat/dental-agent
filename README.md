@@ -195,7 +195,8 @@ What would have to change. None of this is built; this is the list I would work 
 7. **Load.** The graph's fallback LLM call is synchronous and blocks the event loop of the webhook; it must move to a worker thread or queue. Sessions are in memory and are lost on restart.
 8. **Languages.** Rules are Japanese. Other languages go to the LLM fallback only, which is not enough for registration (see Status and limits).
 9. **Monitoring.** Alerts on handoff rate, tool-error rate, and the share of dialogues ending without a result, using the traces already produced.
-10. **Intake form page.** Build the page behind the signed link (autosave, "I will fill it in at the clinic", data never sent to an LLM), specified in `docs/INTAKE.md`.
+10. **Operator takeover.** After a handoff the conversation switches to a human mode: the agent is bypassed, patient messages are stored for the operator, a small operator page sends replies through the Push API and can return the conversation to the bot. The conversation text of handed-over chats would have to be stored for a defined retention period.
+11. **Intake form page.** Build the page behind the signed link (autosave, "I will fill it in at the clinic", data never sent to an LLM), specified in `docs/INTAKE.md`.
 
 ---
 
@@ -265,5 +266,5 @@ Not done, stated plainly:
 - **Intake form page (問診票): a to-do for a production deployment.** The booking tool issues a signed token and a link (`INTAKE_BASE_URL`, default `http://localhost:8000/intake/<token>`), and the agent tells a new patient that the form is optional and gives the link, but no page serves that URL in this portfolio version. The form's fields and rules are specified in `docs/INTAKE.md`.
 - **Russian and English are not supported in patient dialogue.** Parsers are Japanese; a Russian message reaches only the LLM fallback and a new patient cannot complete registration. Russian and English exist in the developer-facing materials and in the summary page.
 - Sessions are in memory; the fallback LLM call blocks the webhook's event loop (details above).
-- Admin interface (E9) and an interface for external patient agents (E10) are planned and not started. The evening variant of the owner summary is not built.
+- Out of scope for this portfolio version, left as production extensions: an admin interface (editing services, hours and closed days, entering phone bookings through the agent), an interface for external patient agents, operator takeover of a conversation, and the evening variant of the owner summary.
 - Several parameters are assumptions about a clinic (working hours, a two-shift Saturday, 60-minute first visit); they live in config and the database, and can be changed.
