@@ -141,6 +141,10 @@ One dialogue is one trace: `dialog` → `turn` → graph `node.*` → `tool.*` a
 - Tests check that no card number, birth date, name or message text reaches span attributes.
 - The owner summary is deliberately not traced: it is a batch job over aggregates, not a conversation with a patient.
 
+<p><img src="docs/img/trace-s01.png" width="100%" alt="Phoenix trace of evaluation dialogue s01"></p>
+
+*Trace of evaluation dialogue s01 (simple cleaning booking) in Phoenix: the tree `dialog` → `turn` → `node.*` → `tool.*`, and the evaluation attributes on the root span. The `llm.chat` spans outside `turn` are the patient simulator; the agent itself used 0 tokens here because the graph handled the dialogue with rules. Content is hidden by default.*
+
 ---
 
 ## LINE channel
