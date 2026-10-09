@@ -1,0 +1,52 @@
+# Профили LLM. Любой профиль = OpenAI-совместимый чат-эндпоинт (его умеют и Ollama, и OpenRouter).
+# Ключ не хранится здесь: в api_key_env указано имя переменной окружения (или строка в .env).
+# Роли выбирают профиль для агента и для симулятора пациента (лучше разные модели: см. docs/DECISIONS.md).
+
+[roles]
+agent = "local"
+simulator = "or_sim_ds"
+
+[profiles.local]                       # Ollama на этой машине
+# model: ТОЧНЫЙ тег из `ollama list` (колонка NAME). Контекст: /v1-эндпоинт Ollama не принимает num_ctx в запросе,
+# задавайте его на стороне Ollama (переменная OLLAMA_CONTEXT_LENGTH=16384 или Modelfile `PARAMETER num_ctx 16384`),
+# иначе длинный промпт с инструментами молча обрежется.
+base_url = "http://127.0.0.1:11434/v1"
+model = "gemma4:e4b"
+api_key_env = ""
+temperature = 0.0
+timeout_s = 240
+max_tokens = 1024
+
+# Пример облачного профиля через OpenRouter: раскомментировать, поставить OPENROUTER_API_KEY в .env,
+# выбрать модель на openrouter.ai/models (нужна поддержка tools), и запускать:
+#   uv run python -m dental.eval.run --agent-profile or_agent --sim-profile local
+# [profiles.or_agent]
+# base_url = "https://openrouter.ai/api/v1"
+# model = "google/gemini-2.5-flash"
+# api_key_env = "OPENROUTER_API_KEY"
+# temperature = 0.0
+# timeout_s = 120
+# max_tokens = 1024
+# extra_body = { usage = { include = true } }   # OpenRouter вернёт стоимость запроса в usage.cost
+
+# Симулятор пациента: сильная модель, чтобы диалог держал роль (gemma 4B в первом прогоне путала роль в 5 сценариях).
+# Слаг сверить на openrouter.ai/models. Ключ OPENROUTER_API_KEY лежит в .env.
+[profiles.or_sim]
+base_url = "https://openrouter.ai/api/v1"
+model = "anthropic/claude-haiku-4.5"
+api_key_env = "OPENROUTER_API_KEY"
+temperature = 0.7
+timeout_s = 120
+max_tokens = 300
+extra_body = { usage = { include = true } }
+
+# Дешёвый симулятор пациента (DeepSeek Flash, слаг закреплён, без алиаса ~…-latest ради воспроизводимости).
+# Не известно, включено ли у модели рассуждение по умолчанию: проверить на 1–2 сценариях по стоимости и латентности.
+[profiles.or_sim_ds]
+base_url = "https://openrouter.ai/api/v1"
+model = "deepseek/deepseek-v4.1-flash"
+api_key_env = "OPENROUTER_API_KEY"
+temperature = 0.7
+timeout_s = 120
+max_tokens = 300
+extra_body = { usage = { include = true } }
