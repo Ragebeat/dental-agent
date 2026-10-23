@@ -6,9 +6,14 @@ Own MCP server, LangGraph agent, Postgres, LINE channel, owner summary, Phoenix 
 *Languages: English · [Русский](README.ru.md) · [日本語](README.ja.md)*
 
 > The thesis of the project is not "a bot books appointments". It is: **we measured how often it books correctly, and we know why it fails.**
+>
 > Hard criterion: **0 wrong bookings and 0 duplicate bookings**, enforced by the database and verified by the harness.
+>
+> **The honest number is 0.80, not 0.978.** On 10 held-out scenarios written before the first run and never used for tuning, the graph agent scores 0.80 against 0.60 for the baseline. The 18-point drop from the development set is the measured size of fitting the rules to it.
 
 All data is synthetic. This is a portfolio project, not a deployment into a real clinic. No real patients, phone numbers or medical systems are involved.
+
+**Contents:** [Results](#results) · [What it does](#what-it-does) · [Architecture](#architecture) · [Evaluation method](#evaluation-method) · [What broke and why](#what-broke-and-why) · [Owner summary](#owner-summary) · [Tracing (Phoenix)](#tracing-phoenix) · [LINE channel](#line-channel) · [Security and privacy](#security-and-privacy) · [Taking it to a real clinic](#taking-it-to-a-real-clinic) · [Quickstart](#quickstart) · [Repository layout](#repository-layout) · [Status and limits](#status-and-limits) · [License](#license)
 
 ---
 
@@ -296,3 +301,9 @@ Not done, stated plainly:
 - Sessions are in memory; the fallback LLM call blocks the webhook's event loop (details above).
 - Out of scope for this portfolio version, left as production extensions: an admin interface (editing services, hours and closed days, entering phone bookings through the agent), an interface for external patient agents, operator takeover of a conversation, and the evening variant of the owner summary.
 - Several parameters are assumptions about a clinic (working hours, a two-shift Saturday, 60-minute first visit); they live in config and the database, and can be changed.
+
+---
+
+## License
+
+Code: [MIT](LICENSE). All data in the repository is synthetic.
