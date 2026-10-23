@@ -1,4 +1,4 @@
-"""Настройки клиники, прочитанные из БД (админ правит их там; clinic.toml только первичная заливка)."""
+"""Clinic settings read from the database (the admin edits them there; clinic.toml is only the initial seed)."""
 
 from __future__ import annotations
 

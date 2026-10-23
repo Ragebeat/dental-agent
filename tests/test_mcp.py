@@ -13,7 +13,7 @@ EXPECTED = {"list_services", "search_slots", "verify_identity", "register_new_pa
 
 
 def session(core, script):
-    """script(call) — async-функция; call(name, **args) → dict. Одна сессия MCP."""
+    """script(call) is an async function; call(name, **args) → dict. One MCP session."""
     async def main():
         srv = build_server(core, now_fn=lambda: NOW)
         async with Client(srv) as c:
@@ -45,7 +45,7 @@ def test_full_flow(core, db_url):
         b = await call("book_appointment", service="cleaning", start="2026-10-14T16:00")
         assert b["ok"] and b["appointment"]["start"].startswith("2026-10-14T16:00")
         aid = b["appointment"]["appointment_id"]
-        b2 = await call("book_appointment", service="cleaning", start="2026-10-14T16:00")      # повтор модели
+        b2 = await call("book_appointment", service="cleaning", start="2026-10-14T16:00")      # the model repeats itself
         assert b2["ok"] and b2["already_booked_by_retry"] and b2["appointment"]["appointment_id"] == aid
         mine = await call("get_my_appointments")
         assert [a["appointment_id"] for a in mine["appointments"]] == [aid]
@@ -54,7 +54,7 @@ def test_full_flow(core, db_url):
         aid2 = r["appointment"]["appointment_id"]
         x = await call("cancel_appointment", appointment_id=aid2)
         assert x["ok"] and x["appointment"]["status"] == "cancelled"
-        again = await call("book_appointment", service="cleaning", start="2026-10-14T17:00")  # тот же слот после отмены
+        again = await call("book_appointment", service="cleaning", start="2026-10-14T17:00")  # the same slot after cancelling
         assert again["ok"] and not again["already_booked_by_retry"]
     session(core, script)
 
@@ -65,7 +65,7 @@ def test_errors_are_structured(core):
         t = await call("book_appointment", service="cleaning", start="2026-10-09T15:00")
         assert t["ok"] is False and t["error"] == "slot_taken" and t["alternatives"]
         assert (await call("book_appointment", service="cleaning", start="2026-10-08T10:00"))["error"] == "closed_day"
-        assert (await call("book_appointment", service="cleaning", start="вчера"))["error"] == "invalid_input"
+        assert (await call("book_appointment", service="cleaning", start="yesterday"))["error"] == "invalid_input"
         assert (await call("search_slots", service="cleaning", date_from="2026-10-01", date_to="2026-11-30"))["error"] == "invalid_input"
         assert (await call("search_slots", service="nope", date_from="2026-10-14", date_to="2026-10-14"))["ok"] is False
     session(core, script)
@@ -79,7 +79,7 @@ def test_cannot_touch_foreign_appointment(core, db_url):
         await call("verify_identity", card_number=100001, birth_date="1988-04-12")
         assert (await call("cancel_appointment", appointment_id=foreign))["error"] == "not_found"
         assert (await call("reschedule_appointment", appointment_id=foreign, new_start="2026-10-14T16:00"))["error"] == "not_found"
-        h = await call("handoff_to_staff", reason="other", summary="тест", appointment_id=foreign)
+        h = await call("handoff_to_staff", reason="other", summary="test", appointment_id=foreign)
         assert h["ok"]
     session(core, script)
     with connect(db_url) as c:
@@ -93,7 +93,7 @@ def test_late_cancel_hint_and_handoff(core, db_url):
         mine = (await call("get_my_appointments"))["appointments"]
         r = await call("cancel_appointment", appointment_id=mine[0]["appointment_id"])
         assert r["error"] == "too_late_to_cancel" and r["handoff_reason"] == "late_cancel"
-        assert (await call("handoff_to_staff", reason="late_cancel", summary="отмена за <24ч"))["ok"]
+        assert (await call("handoff_to_staff", reason="late_cancel", summary="cancellation <24h ahead"))["ok"]
         assert (await call("handoff_to_staff", reason="bogus", summary="x"))["error"] == "invalid_input"
     session(core, script)
     with connect(db_url) as c:
@@ -133,7 +133,7 @@ def test_lockout_through_tools(core):
     async def script(call, c):
         codes = [(await call("verify_identity", card_number=100001, birth_date="2000-01-01"))["error"] for _ in range(7)]
         assert codes == ["patient_not_verified"] * 5 + ["locked"] * 2
-        # верные данные в той же сессии тоже заблокированы
+        # correct data in the same session is locked too
         assert (await call("verify_identity", card_number=100001, birth_date="1988-04-12"))["error"] == "locked"
     session(core, script)
 

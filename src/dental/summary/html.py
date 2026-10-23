@@ -1,4 +1,4 @@
-"""Одна самодостаточная HTML-страница: сводка JA/RU (переключатель), таблицы с реальными данными, проверка."""
+"""One self-contained HTML page: the JA/RU summary (switchable), tables with the real data, the check."""
 
 from __future__ import annotations
 

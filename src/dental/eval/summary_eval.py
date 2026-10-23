@@ -1,5 +1,5 @@
-"""Eval сводки владельцу (E5): в чистую БД закладываются известные события, сводка пишется N раз, считаются
-recall заложенных фактов и число выдуманных — по ПЕРВОЙ попытке модели (повторы и запасной шаблон скрывают ошибки модели).
+"""Eval of the owner summary (E5): known events are planted in a clean database, the summary is written N times, and
+recall of the planted facts and the number of fabricated ones are counted on the model's FIRST attempt (retries and the fallback template hide model errors).
 
   uv run python -m dental.eval.summary_eval --profile local --repeats 3
 """
@@ -23,7 +23,7 @@ from dental.synth.generate import build_snapshot
 
 
 def plant(core: ClinicCore, now: datetime) -> list[str]:
-    """Закладывает события после закрытия предыдущего рабочего дня; возвращает ожидаемые ссылки, посчитанные независимо от collect()."""
+    """Plants events after the previous working day has closed; returns the expected references, computed independently of collect()."""
     ev = now - timedelta(hours=3)
     refs: list[str] = []
     _quiet_day(core, now)
@@ -37,7 +37,7 @@ def plant(core: ClinicCore, now: datetime) -> list[str]:
     pid = _fixture_id(core, 100001)
     b = core.book(pid, "cleaning", clean, source="line", actor="patient_agent", now=ev)
     refs.append(f"B{b.id}")
-    kenshin = _first(core, "kenshin", now, ev, last=True)       # другой день/время, чем у чистки: пациент не может быть в двух местах
+    kenshin = _first(core, "kenshin", now, ev, last=True)       # a different day/time than the cleaning: a patient cannot be in two places
     c = core.book(pid, "kenshin", kenshin, source="web", actor="patient_web", now=ev)
     core.cancel(pid, c.id, actor="patient_web", now=ev)
     refs.append(f"C{c.id}")
@@ -48,8 +48,8 @@ def plant(core: ClinicCore, now: datetime) -> list[str]:
 
 
 def _quiet_day(core: ClinicCore, now: datetime) -> None:
-    """Снимок синтетических данных создан «вчера-сегодня» и сам попадает в окно 24 ч. Сдвигаем его в прошлое:
-    у теста «тихий день», в окне остаются только заложенные события."""
+    """The synthetic snapshot was created "yesterday-today" and itself falls into the 24 h window. It is shifted into the past:
+    the test gets a "quiet day", and only the planted events remain in the window."""
     since = now - timedelta(hours=24)
     with core._connect() as conn, conn.transaction():
         for table, col in (("appointments", "created_at"), ("appointments", "cancelled_at"),
@@ -58,11 +58,11 @@ def _quiet_day(core: ClinicCore, now: datetime) -> None:
 
 
 def _first(core: ClinicCore, code: str, now: datetime, ev: datetime, skip: int = 0, last: bool = False) -> datetime:
-    """Первый свободный слот услуги в ближайшие дни (после завтрашнего: завтра — план, а не новые записи)."""
+    """The first free slot of a service in the coming days (after tomorrow: tomorrow is the plan, not new bookings)."""
     d1 = (now + timedelta(days=3)).date()
     slots = core.find_slots(code, d1, d1 + timedelta(days=11), now=ev)
     if len(slots) <= skip:
-        raise RuntimeError(f"нет свободных слотов {code} для заложенного события")
+        raise RuntimeError(f"no free {code} slots for the planted event")
     return slots[-1] if last else slots[skip]
 
 
@@ -73,7 +73,7 @@ def _fixture_id(core: ClinicCore, card: int) -> int:
 
 def evaluate(llm, repeats: int, cfg=None) -> dict:
     cfg = cfg or load_config()
-    now = cfg.now().replace(hour=8, minute=30)      # утренняя сводка
+    now = cfg.now().replace(hour=8, minute=30)      # the morning summary
     admin = database_url()
     tpl, name = unique_name("dental_sumtpl"), unique_name("dental_sum")
     build_template(admin, tpl, build_snapshot(cfg))
@@ -88,11 +88,11 @@ def evaluate(llm, repeats: int, cfg=None) -> dict:
             for _ in range(repeats):
                 s = write(f, lang, llm)
                 first = s.first or verify("", f)
-                print(f"  {lang} #{len([r for r in rows if r['lang'] == lang]) + 1}: {s.source}, попыток {s.attempts}, "
-                      f"1-я попытка recall {first.recall:.0%}, выдуманных {first.fabricated}", flush=True)
+                print(f"  {lang} #{len([r for r in rows if r['lang'] == lang]) + 1}: {s.source}, attempts {s.attempts}, "
+                      f"1st attempt recall {first.recall:.0%}, fabricated {first.fabricated}", flush=True)
                 if not first.ok:
-                    print(f"     первая попытка: пропущено {first.missing[:6]}, лишние ссылки {first.unknown_refs}, "
-                          f"лишние числа {first.bad_numbers}, общее число {'есть' if first.total_ok else 'нет'}\n     finish={s.first_finish} текст: {s.first_text[:300]!r}", flush=True)
+                    print(f"     first attempt: missing {first.missing[:6]}, unknown refs {first.unknown_refs}, "
+                          f"wrong numbers {first.bad_numbers}, total count {'present' if first.total_ok else 'absent'}\n     finish={s.first_finish} text: {s.first_text[:300]!r}", flush=True)
                 rows.append({"lang": lang, "source": s.source, "attempts": s.attempts, "first_recall": first.recall,
                              "first_fabricated": first.fabricated, "first_ok": first.ok, "first_text": s.first_text if not first.ok else "", "final_ok": s.check.ok})
         out = {"planted": len(planted), "runs": len(rows), "first_ok_rate": mean(r["first_ok"] for r in rows),
@@ -120,7 +120,7 @@ def main(argv=None) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("a", encoding="utf-8") as fh:
         fh.write(json.dumps(res, ensure_ascii=False) + "\n")
-    print("записано:", path)
+    print("written:", path)
 
 
 if __name__ == "__main__":

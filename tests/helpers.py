@@ -22,7 +22,7 @@ def jst(y, m, d, hh=0, mm=0):
 
 
 def run_parallel(n, fn):
-    """n потоков стартуют одновременно; ошибки домена собираются, остальные исключения падают в тесте."""
+    """n threads start at once; domain errors are collected, other exceptions fail the test."""
     barrier = threading.Barrier(n)
 
     def task(i):
@@ -37,7 +37,7 @@ def run_parallel(n, fn):
 
 
 def free_patients(db_url, day: date, n: int):
-    """Пациенты с ровно одной активной записью и без записей в этот день (могут записаться ещё раз)."""
+    """Patients with exactly one active appointment and none on this day (they can book once more)."""
     with connect(db_url) as c:
         rows = c.execute(
             "SELECT p.id FROM patients p WHERE p.id >= 6"
@@ -49,19 +49,19 @@ def free_patients(db_url, day: date, n: int):
 
 
 def assert_invariants(db_url):
-    """То, что не должно нарушаться никогда: ни кресла, ни пациенты, ни дубли, ни часы, ни лимит."""
+    """What must never be violated: chairs, patients, duplicates, hours, the limit."""
     with connect(db_url) as c:
         q = lambda sql: c.execute(sql).fetchone()["n"]  # noqa: E731
         assert q("SELECT count(*) AS n FROM appointments a JOIN appointments b ON a.id < b.id AND a.status='active'"
-                 " AND b.status='active' AND a.chair_id = b.chair_id AND a.during && b.during") == 0, "двойная запись кресла"
+                 " AND b.status='active' AND a.chair_id = b.chair_id AND a.during && b.during") == 0, "chair double-booked"
         assert q("SELECT count(*) AS n FROM appointments a JOIN appointments b ON a.id < b.id AND a.status='active'"
-                 " AND b.status='active' AND a.patient_id = b.patient_id AND a.during && b.during") == 0, "пациент в двух местах"
+                 " AND b.status='active' AND a.patient_id = b.patient_id AND a.during && b.during") == 0, "patient in two places"
         assert q("SELECT count(*) AS n FROM (SELECT 1 FROM appointments WHERE status='active' GROUP BY patient_id,"
-                 " service_code, day HAVING count(*) > 1) t") == 0, "дубль"
+                 " service_code, day HAVING count(*) > 1) t") == 0, "duplicate"
         assert q("SELECT count(*) AS n FROM (SELECT 1 FROM appointments WHERE status='active' GROUP BY patient_id"
-                 " HAVING count(*) > 2) t") == 0, "больше 2 активных"
+                 " HAVING count(*) > 2) t") == 0, "more than 2 active"
         for r in c.execute("SELECT id, service_code, during FROM appointments WHERE status='active'").fetchall():
             n = CFG.services[r["service_code"]].duration_slots
             s = r["during"].lower.astimezone(TZ)
-            assert s in CAL.valid_starts(s.date(), n), f"запись {r['id']} вне часов: {s}"
-            assert s >= NOW, f"запись {r['id']} в прошлом"
+            assert s in CAL.valid_starts(s.date(), n), f"appointment {r['id']} outside hours: {s}"
+            assert s >= NOW, f"appointment {r['id']} in the past"

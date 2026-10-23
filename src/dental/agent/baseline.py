@@ -1,7 +1,7 @@
-"""Базовый агент: один промпт, те же инструменты, цикл ReAct (думай → вызови инструмент → прочитай → ответь).
+"""Baseline agent: one prompt, the same tools, a ReAct loop (think → call a tool → read → answer).
 
-Без графа и без правил передачи человеку: это точка отсчёта, с которой сравнивается всё усложнение (раздел 6.5 ТЗ).
-Промпт зафиксирован до первого прогона; правки «под провалы» запрещены (см. docs/DECISIONS.md).
+No graph and no handoff rules: this is the reference point every added complexity is compared against (SPEC section 6.5).
+The prompt was frozen before the first run; edits "to fix failures" are forbidden (see docs/DECISIONS.md).
 """
 
 from __future__ import annotations
@@ -89,14 +89,14 @@ class BaselineAgent:
         self.events: list[dict] = []
         self.usage = Usage()
         self.round_limit_hits = 0
-        self.turn = 0                       # номер реплики пациента, на которую отвечаем (с 1)
+        self.turn = 0                       # number of the patient message being answered (from 1)
 
     async def _tool(self, name: str, args: dict) -> dict:
         try:
             r = await self.mcp.call_tool(name, args)
             text = r.content[0].text if r.content else ""
             is_err = getattr(r, "is_error", False)
-        except Exception as e:  # noqa: BLE001  — ошибка протокола/валидации аргументов возвращается модели как данные
+        except Exception as e:  # noqa: BLE001  — a protocol/argument-validation error goes back to the model as data
             text, is_err = str(e)[:500], True
         try:
             res = json.loads(text)

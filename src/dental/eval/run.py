@@ -1,8 +1,8 @@
-"""Прогон набора сценариев и запись в журнал.
+"""Running a scenario set and logging it.
 
-  uv run python -m dental.eval.run                                  # роли из llm.toml, 3 повтора
+  uv run python -m dental.eval.run                                  # roles from llm.toml, 3 repeats
   uv run python -m dental.eval.run --agent-profile or_agent --sim-profile local --label gemini-flash
-  uv run python -m dental.eval.run --scenarios s01,s05 --repeats 1  # быстрая проверка
+  uv run python -m dental.eval.run --scenarios s01,s05 --repeats 1  # quick check
 """
 
 from __future__ import annotations
@@ -36,7 +36,7 @@ def _sha(obj) -> str:
 
 
 def fingerprint(agent_llm, sim_llm, cfg, scenarios, settings: RunSettings, tools_hash: str) -> dict:
-    """Всё, что меняет результат. Два прогона сравнимы честно только если различия видны в отпечатке."""
+    """Everything that changes the result. Two runs compare honestly only if their differences show in the fingerprint."""
     fp = {
         "agent": agent_llm.profile.fingerprint(), "simulator": sim_llm.profile.fingerprint(),
         "prompt": f"{PROMPT_VERSION}:{prompt_hash()}", "tools": tools_hash,
@@ -45,7 +45,7 @@ def fingerprint(agent_llm, sim_llm, cfg, scenarios, settings: RunSettings, tools
         "scenarios": _sha({s.id: s.model_dump() for s in scenarios}),
     }
     if settings.channel != "web":
-        fp["channel"] = settings.channel                    # только для не-web: отпечатки старых прогонов остаются сопоставимыми
+        fp["channel"] = settings.channel                    # non-web only: fingerprints of older runs stay comparable
     if settings.agent == "graph":
         from dental.agent import dates, graph, understand
         src = "".join(Path(m.__file__).read_text(encoding="utf-8") for m in (graph, dates, understand))
@@ -72,17 +72,17 @@ def main(argv=None) -> None:
     ap.add_argument("--agent-profile", default="agent")
     ap.add_argument("--sim-profile", default="simulator")
     ap.add_argument("--repeats", type=int, default=3)
-    ap.add_argument("--scenarios", default="", help="id или префиксы через запятую (s01,s05); пусто = все")
+    ap.add_argument("--scenarios", default="", help="ids or prefixes, comma-separated (s01,s05); empty = all")
     ap.add_argument("--workers", type=int, default=1)
     ap.add_argument("--label", default="")
     ap.add_argument("--max-rounds", type=int, default=8)
     ap.add_argument("--token-cap", type=int, default=150_000)
     ap.add_argument("--keep-db", action="store_true")
-    ap.add_argument("--channel", choices=["web", "line"], default="web", help="web: агент вызывается напрямую; line: реплики идут через вебхук LINE (E7, нужен --agent graph)")
-    ap.add_argument("--trace", action="store_true", help="слать трассы в Phoenix (127.0.0.1:6006, проект dental-agent); по умолчанию выключено")
+    ap.add_argument("--channel", choices=["web", "line"], default="web", help="web: the agent is called directly; line: messages go through the LINE webhook (E7, needs --agent graph)")
+    ap.add_argument("--trace", action="store_true", help="send traces to Phoenix (127.0.0.1:6006, project dental-agent); off by default")
     ap.add_argument("--set", choices=["golden", "holdout"], default="golden", dest="scenario_set",
-                    help="golden: набор разработки; holdout: отложенный набор (прогонять только на замороженной версии агента)")
-    ap.add_argument("--agent", choices=["baseline", "graph"], default="baseline", help="реализация агента: baseline (ReAct) или graph (LangGraph, E4)")
+                    help="golden: the development set; holdout: the held-out set (run only on a frozen agent version)")
+    ap.add_argument("--agent", choices=["baseline", "graph"], default="baseline", help="agent implementation: baseline (ReAct) or graph (LangGraph, E4)")
     a = ap.parse_args(argv)
 
     tracing.setup(enable=a.trace)
@@ -92,14 +92,14 @@ def main(argv=None) -> None:
         pref = [p.strip() for p in a.scenarios.split(",") if p.strip()]
         scenarios = [s for s in scenarios if any(s.id.startswith(p) for p in pref)]
     if not scenarios:
-        raise SystemExit("нет сценариев по фильтру")
+        raise SystemExit("no scenarios match the filter")
     try:
         agent_llm, sim_llm = get_llm(a.agent_profile), get_llm(a.sim_profile)
     except LLMError as e:
         profiles, roles = load_profiles()
-        raise SystemExit(f"{e}\nроли: {roles}") from None
+        raise SystemExit(f"{e}\nroles: {roles}") from None
     if a.channel == "line" and a.agent != "graph":
-        raise SystemExit("--channel line работает только с --agent graph")
+        raise SystemExit("--channel line works only with --agent graph")
     settings = RunSettings(max_rounds=a.max_rounds, token_cap=a.token_cap, keep_db=a.keep_db, agent=a.agent, channel=a.channel)
 
     admin_url = database_url()
@@ -108,18 +108,18 @@ def main(argv=None) -> None:
     try:
         fp = fingerprint(agent_llm, sim_llm, cfg, scenarios, settings, _tools_hash(admin_url, tpl))
         if a.scenario_set != "golden":
-            fp["scenario_set"] = a.scenario_set               # только для не-golden: отпечатки старых прогонов остаются сопоставимыми
+            fp["scenario_set"] = a.scenario_set               # non-golden only: fingerprints of older runs stay comparable
         run_id = datetime.now(ZoneInfo("Asia/Tokyo")).strftime("%Y%m%d-%H%M%S") + (f"-{a.label}" if a.label else "")
         jobs = [(sc, r) for r in range(1, a.repeats + 1) for sc in scenarios]
-        print(f"run {run_id}: {len(scenarios)} сценариев × {a.repeats}; агент {agent_llm.profile.model}, "
-              f"симулятор {sim_llm.profile.model}", flush=True)
+        print(f"run {run_id}: {len(scenarios)} scenarios × {a.repeats}; agent {agent_llm.profile.model}, "
+              f"simulator {sim_llm.profile.model}", flush=True)
 
         def work(job):
             sc, rep = job
             try:
                 res = run_scenario(sc, cfg, agent_llm, sim_llm, admin_url=admin_url, template_db=tpl, settings=settings,
                                    tags={"run_id": run_id, "repeat": rep})
-            except Exception as e:  # noqa: BLE001  — баг стенда не должен ронять весь прогон
+            except Exception as e:  # noqa: BLE001  — a harness bug must not bring down the whole run
                 res = {"scenario_id": sc.id, "ended_by": "error", "error": f"{type(e).__name__}: {e}",
                        "trace": traceback.format_exc()[-1500:], "transcript": [], "tool_events": [], "turns": 0,
                        "agent_usage": {"calls": 0, "prompt_tokens": 0, "completion_tokens": 0, "cost": 0, "latencies": []},
@@ -151,7 +151,7 @@ def main(argv=None) -> None:
             list(ex.map(work_and_keep, jobs))
         except KeyboardInterrupt:
             interrupted = True
-            print("\nпрерван (Ctrl+C): сохраняю то, что успело закончиться", flush=True)
+            print("\ninterrupted (Ctrl+C): saving what has finished", flush=True)
             ex.shutdown(wait=False, cancel_futures=True)
         else:
             ex.shutdown()
@@ -160,7 +160,7 @@ def main(argv=None) -> None:
             drop_database(admin_url, tpl)
 
     if not results:
-        raise SystemExit("нет завершённых сценариев, нечего сохранять")
+        raise SystemExit("no finished scenarios, nothing to save")
     if interrupted:
         run_id += "-partial"
     m = compute(results)
@@ -171,7 +171,7 @@ def main(argv=None) -> None:
         f.write(json.dumps({"run_id": run_id, "label": a.label, "repeats": a.repeats, "fingerprint": fp,
                             "metrics": m, "partial": interrupted, "file": f"runs/{run_id}.json"}, ensure_ascii=False) + "\n")
     print_summary(m)
-    print(f"записано: data/runs/{run_id}.json и data/runs.jsonl")
+    print(f"written: data/runs/{run_id}.json and data/runs.jsonl")
 
 
 def print_summary(m: dict) -> None:

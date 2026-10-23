@@ -1,4 +1,4 @@
-"""Сводка владельцу: шаблон, проверка текста против фактов, запасной шаблон при плохом LLM, HTML. Без базы."""
+"""Owner summary: the template, checking a text against the facts, the fallback template for a bad LLM, HTML. No database."""
 from datetime import date, datetime
 from zoneinfo import ZoneInfo
 
@@ -72,7 +72,7 @@ def test_html_has_switch_both_languages_and_escapes_untrusted_text():
 
 
 def test_check_catches_swapped_service_numbers_and_llm_sees_names_not_codes():
-    f = facts()                      # свободных: чистка 12, лечение 7; сегодня приёмов: чистка 1, лечение 1
+    f = facts()                      # free: cleaning 12, treatment 7; appointments today: cleaning 1, treatment 1
     good = template(f, "ja")
     assert verify(good, f).bad_pairs == []
     swapped = good.replace("クリーニング12", "クリーニング7").replace("治療7", "治療12")

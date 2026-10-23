@@ -1,7 +1,7 @@
-"""Рабочий календарь клиники: какие дни открыты и с каких времён можно начать запись.
+"""The clinic's working calendar: which days are open and at which times an appointment can start.
 
-Чистые функции без БД и без LLM. Строится из clinic.toml (ClinicConfig) или из словаря
-настроек (так он хранится в БД: clinic_settings.schedule).
+Pure functions, no database and no LLM. Built from clinic.toml (ClinicConfig) or from a settings
+dict (as stored in the database: clinic_settings.schedule).
 """
 
 from __future__ import annotations
@@ -56,7 +56,7 @@ class ClinicCalendar:
         ]
 
     def valid_starts(self, d: date, n_slots: int = 1) -> list[datetime]:
-        """Времена начала записи на n_slots слотов: вся запись внутри одной смены."""
+        """Appointment start times for n_slots slots: the whole appointment within one shift."""
         out: list[datetime] = []
         need = self.slot * n_slots
         for o, c in self.shifts(d):
@@ -67,6 +67,6 @@ class ClinicCalendar:
         return out
 
     def open_dates(self, first: date, last: date) -> list[date]:
-        """Открытые дни от first до last включительно."""
+        """Open days from first to last inclusive."""
         days = (last - first).days
         return [d for d in (first + timedelta(days=i) for i in range(days + 1)) if self.is_open(d)]

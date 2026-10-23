@@ -1,8 +1,8 @@
-"""Структурированные факты для сводки. Только код и SQL; LLM сюда не заходит.
+"""Structured facts for the summary. Code and SQL only; no LLM here.
 
-Сводка строится утром рабочего дня (около 08:30) и описывает СЕГОДНЯ. Окно событий: с закрытия предыдущего рабочего дня до `now`
-(отмены, новые пациенты, новые записи; выходные и праздники входят в окно сами), плюс всё нерешённое (открытые передачи любого
-возраста) и план на сегодня. Имена/телефоны/тексты передач в представление для LLM не входят.
+The summary is built on a working-day morning (around 08:30) and describes TODAY. The event window: from the close of the previous working day to `now`
+(cancellations, new patients, new bookings; weekends and holidays fall into the window by themselves), plus everything unresolved (open handoffs of any
+age) and today's plan. Names, phones and handoff texts never enter the view given to the LLM.
 """
 
 from __future__ import annotations
@@ -12,8 +12,8 @@ from datetime import date, datetime, timedelta
 
 from dental.core.service import ClinicCore
 
-WINDOW_H = 24            # запасное окно, если предыдущий рабочий день не найден
-STALE_H = 24            # открытая передача старше этого — «зависла»
+WINDOW_H = 24            # fallback window if the previous working day is not found
+STALE_H = 24            # an open handoff older than this is "stuck"
 SERVICE_RU = {"chiryo": "лечение", "cleaning": "чистка", "kenshin": "профосмотр", "shoshin": "первичный приём",
               "shishu": "проверка дёсен"}
 
@@ -22,13 +22,13 @@ SERVICE_RU = {"chiryo": "лечение", "cleaning": "чистка", "kenshin":
 class Facts:
     now: datetime
     today: date
-    since: datetime            # начало окна событий: закрытие предыдущего рабочего дня
+    since: datetime            # start of the event window: the close of the previous working day
     open_today: bool = True
     today_appts: list[dict] = field(default_factory=list)     # id, start(iso), service, label_ja, card, name
     cancellations: list[dict] = field(default_factory=list)      # id, start, service, label_ja, card
     new_patients: list[dict] = field(default_factory=list)       # card, name
     new_bookings: list[dict] = field(default_factory=list)       # id, start, service, label_ja, card, source
-    free_slots: dict[str, int] = field(default_factory=dict)     # service code -> число времён начала сегодня (после now)
+    free_slots: dict[str, int] = field(default_factory=dict)     # service code -> number of start times today (after now)
     handoffs: list[dict] = field(default_factory=list)           # id, reason, age_h, stale, card, appointment_id, summary
     labels: dict[str, str] = field(default_factory=dict)         # service code -> label_ja
 
@@ -40,8 +40,8 @@ class Facts:
         return self.labels.get(code, code) if lang == "ja" else SERVICE_RU.get(code, code)
 
     def llm_view(self, lang: str = "ja") -> dict:
-        """Всё, что видит модель: без имён, телефонов, дат рождения и без свободного текста передач.
-        Услуги — названиями на языке текста (не кодами: по кодам модель транслитерирует и путает)."""
+        """Everything the model sees: no names, phones, birth dates or free handoff text.
+        Services by name in the text's language (not by code: from codes the model transliterates and mixes them up)."""
         S = lambda c: self.svc(c, lang)      # noqa: E731
         return {
             "today": self.today.isoformat(), "events_since": self.since.isoformat(timespec="minutes"),
@@ -60,7 +60,7 @@ class Facts:
         }
 
     def must_refs(self) -> list[str]:
-        """Что обязано попасть в текст (recall): каждая отмена, новый пациент, новая запись, открытая передача."""
+        """What must appear in the text (recall): every cancellation, new patient, new booking, open handoff."""
         return ([f"C{c['id']}" for c in self.cancellations] + [f"N{p['card']}" for p in self.new_patients]
                 + [f"B{b['id']}" for b in self.new_bookings] + [f"H{h['id']}" for h in self.handoffs])
 
@@ -76,7 +76,7 @@ def _count_by(rows: list[dict], labels: dict[str, str]) -> dict[str, int]:
 
 
 def _prev_close(cal, today: date) -> datetime | None:
-    """Закрытие последнего рабочего дня перед `today` (учитывает выходные дни клиники и праздники)."""
+    """The close of the last working day before `today` (accounts for the clinic's days off and holidays)."""
     for i in range(1, 15):
         sh = cal.shifts(today - timedelta(days=i))
         if sh:
@@ -125,7 +125,7 @@ def collect(core: ClinicCore, now: datetime) -> Facts:
     for code in labels:
         try:
             n = len(core.find_slots(code, today, today, now=now))
-        except Exception:        # noqa: BLE001  услуга недоступна на этот день (например, только для новых) — не факт сводки
+        except Exception:        # noqa: BLE001  service unavailable that day (e.g. new patients only) — not a summary fact
             n = 0
         if n:
             f.free_slots[code] = n

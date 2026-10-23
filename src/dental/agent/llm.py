@@ -1,6 +1,6 @@
-"""Адаптер LLM: один интерфейс, любой OpenAI-совместимый эндпоинт (Ollama, OpenRouter, ...).
+"""LLM adapter: one interface, any OpenAI-compatible endpoint (Ollama, OpenRouter, ...).
 
-Смена модели = смена профиля в llm.toml; код агента, симулятора и оценки не меняется.
+Changing the model means changing the profile in llm.toml; the agent, simulator and evaluation code stay the same.
 """
 
 from __future__ import annotations
@@ -61,7 +61,7 @@ class Profile:
     max_tokens: int = 1024
     extra_body: dict = field(default_factory=dict)
 
-    def fingerprint(self) -> dict:      # без ключа
+    def fingerprint(self) -> dict:      # without the key
         return {"name": self.name, "base_url": self.base_url, "model": self.model,
                 "temperature": self.temperature, "max_tokens": self.max_tokens, "extra_body": self.extra_body}
 
@@ -113,7 +113,7 @@ class OpenAICompat(LLM):
         headers = {"Content-Type": "application/json"}
         key = _env(p.api_key_env)
         if p.api_key_env and not key:
-            raise LLMError(f"нет ключа: задайте {p.api_key_env} в окружении или .env")
+            raise LLMError(f"no key: set {p.api_key_env} in the environment or .env")
         if key:
             headers["Authorization"] = f"Bearer {key}"
         last: Exception | None = None
@@ -124,7 +124,7 @@ class OpenAICompat(LLM):
                 if r.status_code in (429, 500, 502, 503, 504):
                     raise LLMError(f"HTTP {r.status_code}: {r.text[:200]}")
                 if r.status_code >= 400:
-                    raise LLMError(f"HTTP {r.status_code}: {r.text[:300]}")      # без повторов: ошибка запроса
+                    raise LLMError(f"HTTP {r.status_code}: {r.text[:300]}")      # no retries: a request error
                 return self._parse(r.json(), time.perf_counter() - t0)
             except (httpx.HTTPError, LLMError) as e:
                 last = e
@@ -138,7 +138,7 @@ class OpenAICompat(LLM):
         try:
             msg = data["choices"][0]["message"]
         except (KeyError, IndexError):
-            raise LLMError(f"неожиданный ответ: {str(data)[:300]}") from None
+            raise LLMError(f"unexpected response: {str(data)[:300]}") from None
         calls = []
         for i, c in enumerate(msg.get("tool_calls") or []):
             fn = c.get("function", {})
@@ -157,7 +157,7 @@ class OpenAICompat(LLM):
 
 
 class FakeLLM(LLM):
-    """Для тестов: на каждый вызов отдаёт следующий элемент сценария (LLMReply или функция messages → LLMReply)."""
+    """For tests: each call returns the next item of the script (an LLMReply or a function messages → LLMReply)."""
 
     def __init__(self, script, name: str = "fake") -> None:
         self.script = list(script)
@@ -167,20 +167,20 @@ class FakeLLM(LLM):
     def chat(self, messages, tools=None, max_tokens=None) -> LLMReply:
         self.calls.append([dict(m) for m in messages])
         if not self.script:
-            raise LLMError("FakeLLM: сценарий закончился")
+            raise LLMError("FakeLLM: the script ran out")
         item = self.script.pop(0)
         return item(messages) if callable(item) else item
 
 
 class ManualLLM(LLM):
-    """Маркер ручного режима: роль симулятора играет человек или Claude через файлы (см. dental.eval.manual)."""
+    """Marker for manual mode: the simulator role is played by a human or by Claude through files (see dental.eval.manual)."""
     manual = True
 
     def __init__(self) -> None:
         self.profile = Profile(name="manual", base_url="manual://", model="manual-human-or-claude")
 
     def chat(self, messages, tools=None, max_tokens=None):   # pragma: no cover
-        raise LLMError("ManualLLM не отвечает сам: используйте ManualSimulator")
+        raise LLMError("ManualLLM does not answer by itself: use ManualSimulator")
 
 
 def get_llm(role_or_profile: str, path: Path = LLM_TOML) -> LLM:
@@ -189,5 +189,5 @@ def get_llm(role_or_profile: str, path: Path = LLM_TOML) -> LLM:
     if name == "manual":
         return ManualLLM()
     if name not in profiles:
-        raise LLMError(f"нет профиля '{name}' в {path.name}; есть: {', '.join(profiles)}")
+        raise LLMError(f"no profile '{name}' in {path.name}; available: {', '.join(profiles)}")
     return OpenAICompat(profiles[name])

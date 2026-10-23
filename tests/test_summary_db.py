@@ -1,4 +1,4 @@
-"""Сводка на живой БД: collect() находит ровно заложенные события; имена не попадают в представление для LLM."""
+"""The summary on a live database: collect() finds exactly the planted events; names do not enter the view given to the LLM."""
 from dental.eval.summary_eval import plant
 from dental.summary.facts import collect
 from dental.summary.text import template, verify

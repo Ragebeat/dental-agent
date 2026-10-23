@@ -1,12 +1,12 @@
-"""Ручной симулятор пациента: роль играет человек или Claude, обмен репликами через файлы в data/manual/.
+"""Manual patient simulator: a human or Claude plays the role, messages are exchanged through files in data/manual/.
 
-Запуск (агент и проверки работают как обычно):
+Run (the agent and the checks work as usual):
   uv run python -m dental.eval.run --sim-profile manual --scenarios s04,s08 --repeats 1 --label manual-diag
 
-Игрок получает ровно то же, что LLM-симулятор: `persona.txt` (системный промпт роли) и реплики агента. Ожидаемых
-результатов сценария он не видит и не должен читать. Команды игрока:
-  python -m dental.eval.manual wait [--timeout 150]     # ждать, пока агент ответит; печатает роль (один раз) и диалог
-  python -m dental.eval.manual say <имя_папки> < текст   # ответить за пациента (текст со stdin; <END> в конце = закончить)
+The player gets exactly what the LLM simulator gets: `persona.txt` (the role's system prompt) and the agent's messages. The scenario's
+expected results are hidden and must not be read. Player commands:
+  python -m dental.eval.manual wait [--timeout 150]     # wait for the agent's reply; prints the role (once) and the dialogue
+  python -m dental.eval.manual say <folder_name> < text  # answer as the patient (text from stdin; <END> at the end = finish)
 """
 
 from __future__ import annotations
@@ -50,7 +50,7 @@ class ManualSimulator:
         while not path.exists():
             if time.monotonic() - t0 > self.timeout_s:
                 self._status("timeout")
-                raise LLMError(f"ручной симулятор: нет ответа за {self.timeout_s:.0f} с ({self.dir.name})")
+                raise LLMError(f"manual simulator: no answer within {self.timeout_s:.0f} s ({self.dir.name})")
             time.sleep(self.poll_s)
         raw = path.read_text(encoding="utf-8").strip()
         ended = END in raw
@@ -70,14 +70,14 @@ class ManualSimulator:
         return self._wait()
 
 
-# ---------- команды игрока ----------
+# ---------- player commands ----------
 def _dialog_text(d) -> str:
     out, n = [], 0
     while (d / f"turn_{n}_patient.txt").exists() or (d / f"turn_{n}_agent.txt").exists():
         if n and (d / f"turn_{n}_agent.txt").exists():
-            out.append("АГЕНТ: " + (d / f"turn_{n}_agent.txt").read_text(encoding="utf-8").strip())
+            out.append("AGENT: " + (d / f"turn_{n}_agent.txt").read_text(encoding="utf-8").strip())
         if (d / f"turn_{n}_patient.txt").exists():
-            out.append("ВЫ: " + (d / f"turn_{n}_patient.txt").read_text(encoding="utf-8").strip())
+            out.append("YOU: " + (d / f"turn_{n}_patient.txt").read_text(encoding="utf-8").strip())
         n += 1
     return "\n".join(out)
 
@@ -97,16 +97,16 @@ def cmd_wait(timeout: float) -> int:
     t0 = time.monotonic()
     while time.monotonic() - t0 < timeout:
         for d, s in _waiting():
-            print(f"### {d.name}  (реплика №{s['turn']})")
+            print(f"### {d.name}  (message #{s['turn']})")
             shown = d / ".persona_shown"
             if not shown.exists():
-                print("--- РОЛЬ (играйте только её) ---\n" + (d / "persona.txt").read_text(encoding="utf-8"))
+                print("--- ROLE (play only this) ---\n" + (d / "persona.txt").read_text(encoding="utf-8"))
                 shown.write_text("1")
-            print("--- ДИАЛОГ ---\n" + _dialog_text(d))
-            print(f"--- ответьте: python -m dental.eval.manual say {d.name} ---")
+            print("--- DIALOGUE ---\n" + _dialog_text(d))
+            print(f"--- answer with: python -m dental.eval.manual say {d.name} ---")
             return 0
         time.sleep(2)
-    print("NOTHING (никто не ждёт ответа)")
+    print("NOTHING (no one is waiting for an answer)")
     return 1
 
 
@@ -115,14 +115,14 @@ def cmd_say(name: str) -> int:
     s = json.loads((d / "status.json").read_text(encoding="utf-8"))
     path = d / f"turn_{s['turn']}_patient.txt"
     if s["state"] != "awaiting_patient" or path.exists():
-        print("сейчас этот диалог ответа не ждёт")
+        print("this dialogue is not waiting for an answer now")
         return 2
     text = sys.stdin.read().strip()
     if not text:
-        print("пустая реплика")
+        print("empty message")
         return 2
     _atomic_write(path, text)
-    print(f"записано: {path.name}")
+    print(f"written: {path.name}")
     return 0
 
 

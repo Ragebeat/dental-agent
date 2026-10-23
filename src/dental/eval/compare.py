@@ -1,10 +1,10 @@
-"""Сравнение двух прогонов: метрики рядом, затем регрессии по сценариям (среднее прячет, что сломалось).
+"""Comparing two runs: metrics side by side, then per-scenario regressions (an average hides what broke).
 
-  uv run python -m dental.eval.compare              # последние два в журнале
-  uv run python -m dental.eval.compare -3 -1        # по номерам в журнале
+  uv run python -m dental.eval.compare              # the last two in the log
+  uv run python -m dental.eval.compare -3 -1        # by index in the log
   uv run python -m dental.eval.compare a.json b.json
   uv run python -m dental.eval.compare --list
-A = старый прогон, B = новый. «Регрессия» = в B хуже.
+A = the old run, B = the new one. "Regression" = worse in B.
 """
 
 from __future__ import annotations
@@ -36,7 +36,7 @@ def load(ref: str, rows: list[dict]) -> dict:
     if ref.lstrip("-").isdigit():
         row = rows[int(ref)]
         return json.loads((JOURNAL.parent / row["file"]).read_text(encoding="utf-8"))
-    raise SystemExit(f"не найден прогон: {ref}")
+    raise SystemExit(f"run not found: {ref}")
 
 
 def main(argv=None) -> None:
@@ -50,16 +50,16 @@ def main(argv=None) -> None:
         return
     refs = argv or ["-2", "-1"]
     if len(refs) != 2 or (len(rows) < 2 and not all(r.endswith(".json") for r in refs)):
-        raise SystemExit("нужны два прогона (в журнале их меньше двух или указано не два)")
+        raise SystemExit("two runs are needed (fewer than two in the log, or not exactly two given)")
     a, b = load(refs[0], rows), load(refs[1], rows)
-    ma, mb = compute(a["results"]), compute(b["results"])      # пересчёт из ответов: определение метрик одно
+    ma, mb = compute(a["results"]), compute(b["results"])      # recomputed from the results: one definition of every metric
     print(f"A: {a['run_id']}   B: {b['run_id']}")
     diff = {k: (a["fingerprint"].get(k), b["fingerprint"].get(k)) for k in b["fingerprint"]
             if a["fingerprint"].get(k) != b["fingerprint"].get(k)}
-    print("отличия конфигурации:", "нет" if not diff else "")
+    print("configuration differences:", "none" if not diff else "")
     for k, (x, y) in diff.items():
         print(f"  {k}: {x} → {y}")
-    print(f"\n{'метрика':26} {'A':>12} {'B':>12}")
+    print(f"\n{'metric':26} {'A':>12} {'B':>12}")
     for k in ma:
         if k == "per_scenario":
             continue
@@ -67,7 +67,7 @@ def main(argv=None) -> None:
         flag = ""
         if x is not None and y is not None and x != y:
             better = (y < x) if k in LOWER_BETTER else (y > x) if k in HIGHER_BETTER else None
-            flag = "" if better is None else ("  лучше" if better else "  ХУЖЕ")
+            flag = "" if better is None else ("  better" if better else "  WORSE")
         print(f"{k:26} {str(x):>12} {str(y):>12}{flag}")
     regress, improve = [], []
     for sid in sorted(set(ma["per_scenario"]) | set(mb["per_scenario"])):
@@ -76,9 +76,9 @@ def main(argv=None) -> None:
         if ra is None or rb is None or ra == rb:
             continue
         (regress if rb < ra else improve).append(f"  {sid}: {pa[0]}/{pa[1]} → {pb[0]}/{pb[1]}")
-    print("\nрегрессии по сценариям (B хуже A):" + ("" if regress else " нет"))
+    print("\nper-scenario regressions (B worse than A):" + ("" if regress else " none"))
     print("\n".join(regress))
-    print("улучшения:" + ("" if improve else " нет"))
+    print("improvements:" + ("" if improve else " none"))
     print("\n".join(improve))
 
 

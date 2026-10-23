@@ -1,4 +1,9 @@
-"""Типизированные ошибки ядра. В E2 каждая превращается в ответ тулзы: код + сообщение + подсказка."""
+"""Typed core errors. Each one becomes a tool response: code + message + hint.
+
+The messages (raised in core/service.py) are deliberately left in Russian: they reach the baseline model
+inside tool results, and the tool fingerprint does not cover them, so translating them would silently
+change the measured behaviour and make new runs incomparable with the logged ones. The graph agent
+reads only the error codes."""
 
 from __future__ import annotations
 
@@ -41,7 +46,7 @@ class PatientBusy(DentalError):             code = "patient_busy"
 class FirstVisitRequired(DentalError):      code = "first_visit_required"
 class NewPatientOnly(DentalError):          code = "new_patient_only"
 class IdempotencyConflict(DentalError):     code = "idempotency_conflict"
-class TooLateToCancel(DentalError):         code = "too_late_to_cancel"  # → передача человеку
+class TooLateToCancel(DentalError):         code = "too_late_to_cancel"  # → handoff to a human
 class NotFound(DentalError):                code = "not_found"
 class AlreadyCancelled(DentalError):        code = "already_cancelled"
 class PatientNotVerified(DentalError):      code = "patient_not_verified"

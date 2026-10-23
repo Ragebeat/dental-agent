@@ -1,4 +1,4 @@
-"""LLM пишет текст сводки по фактам; код проверяет. Не прошёл проверку — до 2 повторов с перечнем ошибок, затем шаблон."""
+"""An LLM writes the summary text from the facts; code checks it. On failure — up to 2 retries listing the errors, then the template."""
 
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ from dental.summary.text import Check, template, verify
 
 LANG_NAME = {"ja": "Japanese (natural, polite business style)", "ru": "Russian"}
 
-# gemma тратит часть бюджета на «размышления»; при 1024 японский ответ обрывался (finish=length) — нужен запас
+# gemma spends part of the budget on "thinking"; at 1024 the Japanese answer was cut off (finish=length) — headroom is needed
 MAX_TOKENS = 4096
 
 SYSTEM = """You write a short morning briefing for the owner of a dental clinic, in {lang}.
@@ -33,7 +33,7 @@ class Section:
     attempts: int
     first_text: str = ""
     first_finish: str = ""
-    first: Check | None = None      # проверка самой первой попытки LLM (до повторов и шаблона) — честная метрика модели
+    first: Check | None = None      # the check of the LLM's very first attempt (before retries and the template) — the honest model metric
 
 
 def _clean(s: str) -> str:
@@ -45,7 +45,7 @@ def _clean(s: str) -> str:
 def write(f: Facts, lang: str, llm: LLM, retries: int = 2) -> Section:
     payload = json.dumps(f.llm_view(lang), ensure_ascii=False, indent=1)
     need = f.must_refs()
-    if need:  # явный чек-лист: модель не может «не заметить» события
+    if need:  # an explicit checklist: the model cannot "overlook" an event
         payload += ("\n\nChecklist: the briefing is incomplete unless it mentions ALL of these "
                     f"({len(need)}), each with its ref in square brackets: " + ", ".join(f"[{r}]" for r in need))
     messages = [{"role": "system", "content": SYSTEM.format(lang=LANG_NAME[lang])},

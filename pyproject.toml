@@ -9,10 +9,10 @@ dependencies = [
     "langgraph>=1.0",
     "psycopg[binary]>=3.2",
     "mcp>=2.3",
-    "arize-phoenix-otel>=0.17.2",     # трассировка (E6); без TRACE=1/--trace не используется
+    "arize-phoenix-otel>=0.17.2",     # tracing (E6); unused without TRACE=1/--trace
     "pydantic>=2.0",
     "pyyaml>=6.0",
-    "starlette>=0.40",               # вебхук LINE (E7); приходит и с mcp, указан явно
+    "starlette>=0.40",               # LINE webhook (E7); comes with mcp too, listed explicitly
     "uvicorn>=0.30",
     "tzdata",            # zoneinfo on Windows has no system time zone database
 ]

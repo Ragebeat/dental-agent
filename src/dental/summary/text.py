@@ -1,8 +1,8 @@
-"""Детерминированный текст сводки (JA/RU) и проверка любого текста против фактов.
+"""Deterministic summary text (JA/RU) and checking any text against the facts.
 
-Шаблон — эталон и запасной вариант: если LLM не прошёл проверку, в отчёт идёт он. Проверка:
-  recall   — каждая отмена, новый пациент, новая запись и открытая передача упомянуты по ссылке [C640], [N100010], [B12], [H3];
-  выдумки  — ссылка, которой нет в фактах; число, которого нет среди чисел фактов; в тексте нет общего числа приёмов на сегодня.
+The template is the reference and the fallback: if the LLM fails the check, the template goes into the report. The check:
+  recall        — every cancellation, new patient, new booking and open handoff is mentioned by reference [C640], [N100010], [B12], [H3];
+  fabrications  — a reference absent from the facts; a number absent from the facts' numbers; no total of today's appointments in the text.
 """
 
 from __future__ import annotations
@@ -82,7 +82,7 @@ class Check:
     unknown_refs: list[str]
     bad_numbers: list[int]
     total_ok: bool
-    bad_pairs: list[str] = field(default_factory=list)      # «услуга + число» не совпало с фактами
+    bad_pairs: list[str] = field(default_factory=list)      # a "service + number" pair that does not match the facts
 
     @property
     def fabricated(self) -> int:
@@ -125,8 +125,8 @@ def _time_nums(iso: str) -> set[int]:
 
 
 def _bad_pairs(body: str, f: Facts) -> list[str]:
-    """Название услуги, за которым сразу идёт число («歯科治療8枠», «Лечение (3)»), должно совпасть с одним из чисел этой услуги:
-    свободные времена начала или число приёмов сегодня. Ловит перепутанные числа, которые по отдельности допустимы."""
+    """A service name immediately followed by a number («歯科治療8枠», «Лечение (3)») must match one of that service's numbers:
+    free start times or today's appointment count. Catches swapped numbers that are each valid on their own."""
     ok: dict[str, set[int]] = {}
     for code in set(f.labels) | set(f.free_slots):
         ok[code] = {f.free_slots.get(code, 0)} | {sum(1 for a in f.today_appts if a["service"] == code)}

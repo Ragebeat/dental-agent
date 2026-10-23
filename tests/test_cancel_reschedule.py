@@ -63,7 +63,7 @@ def test_reschedule_same_slot(core, db_url):
 
 
 def test_reschedule_overlapping_own_window(core, db_url):
-    """Сдвиг на 30 мин внутри собственного окна: старая запись отменяется первой, конфликта с собой нет."""
+    """A 30-minute shift inside its own window: the old appointment is cancelled first, no conflict with itself."""
     aid = appt_id(db_url, PID["P_ONE"])
     new = core.reschedule(PID["P_ONE"], aid, jst(2026, 10, 13, 10, 0), actor="patient_web", now=NOW)
     assert new.start == jst(2026, 10, 13, 10, 0)

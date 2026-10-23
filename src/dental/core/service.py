@@ -1,8 +1,10 @@
-"""Ядро записи: проверка личности, регистрация, поиск слотов, запись, отмена, перенос.
+"""Booking core: identity check, registration, slot search, booking, cancellation, rescheduling.
 
-Без LLM. «Сейчас» всегда приходит параметром `now` (aware datetime), БД и код не вызывают now().
-Гарантии, которые нельзя обойти: исключающие ограничения и уникальные индексы в БД (migrations/001_init.sql);
-остальные правила проверяются здесь внутри транзакции с блокировкой строки пациента.
+No LLM. "Now" always arrives as the `now` parameter (an aware datetime); neither the database nor the code calls now().
+Guarantees that cannot be bypassed: exclusion constraints and unique indexes in the database (migrations/001_init.sql);
+the other rules are checked here, inside a transaction that locks the patient row.
+
+Error messages stay in Russian on purpose — see core/errors.py.
 """
 
 from __future__ import annotations
@@ -73,7 +75,7 @@ class ClinicCore:
         self.url = url or database_url()
         self._clinic: ClinicRuntime | None = None
 
-    # ---------- настройки ----------
+    # ---------- settings ----------
     @property
     def clinic(self) -> ClinicRuntime:
         if self._clinic is None:
@@ -102,10 +104,10 @@ class ClinicCore:
             actor=row["actor"], note=row["note"], created_at=row["created_at"].astimezone(tz),
             rescheduled_from_id=row["rescheduled_from_id"], replayed=replayed)
 
-    # ---------- проверка личности и регистрация ----------
+    # ---------- identity check and registration ----------
     def verify_patient(self, card_number: int, birth_date: date, *, channel: str, client_key: str,
                        now: datetime) -> Patient:
-        """Карта + дата рождения. Блокировка после N неудач подряд по карте или по клиенту."""
+        """Card + birth date. Locked after N failures in a row, per card or per client."""
         _aware(now)
         rules = self.clinic.rules
         result: Patient | None = None
@@ -122,7 +124,7 @@ class ClinicCore:
                 if ok:
                     result = Patient(row["id"], row["card_number"], row["name"], row["name_kana"], row["phone"],
                                      row["birth_date"])
-        if result is None:   # одинаково для неверной даты и несуществующей карты: без «оракула»
+        if result is None:   # the same for a wrong date and a non-existent card: no "oracle"
             raise E.PatientNotVerified("номер карты и дата рождения не совпадают")
         return result
 
@@ -149,8 +151,8 @@ class ClinicCore:
         with self._connect() as conn, conn.transaction():
             key = re.sub(r"\s+", "", name)
             conn.execute("SELECT pg_advisory_xact_lock(hashtextextended(%s, 0))", [f"reg:{key}:{birth_date}"])
-            # Совпадение имени (без пробелов) и даты рождения = вероятно тот же человек, даже если телефон другой:
-            # второй карты не выдаём, дальше разбирается сотрудник.
+            # A matching name (spaces ignored) and birth date = probably the same person, even with a different phone:
+            # no second card is issued; staff take it from there.
             if conn.execute("SELECT 1 FROM patients WHERE regexp_replace(name, %s, '', 'g') = %s AND birth_date = %s",
                             [r"\s", key, birth_date]).fetchone():
                 raise E.AlreadyRegistered("пациент с таким именем и датой рождения уже зарегистрирован; "
@@ -162,11 +164,11 @@ class ClinicCore:
                          " VALUES (%s,'not_started','{}',%s)", [row["id"], now])
         return Patient(row["id"], row["card_number"], row["name"], row["name_kana"], row["phone"], row["birth_date"])
 
-    # ---------- поиск слотов ----------
+    # ---------- slot search ----------
     def find_slots(self, service_code: str, date_from: date, date_to: date, *, now: datetime,
                    time_from: time | None = None, time_to: time | None = None,
                    limit: int | None = None) -> list[datetime]:
-        """Времена начала, на которые свободно хотя бы одно кресло на всю длительность услуги."""
+        """Start times at which at least one chair is free for the whole service duration."""
         _aware(now)
         svc = self._service(service_code)
         with self._connect() as conn:
@@ -220,7 +222,7 @@ class ClinicCore:
                 return sorted(near)
         return []
 
-    # ---------- запись ----------
+    # ---------- booking ----------
     def book(self, patient_id: int, service_code: str, start: datetime, *, source: str, actor: str, now: datetime,
              note: str | None = None, idempotency_key: str | None = None, chair_id: int | None = None) -> Appointment:
         _aware(now); _aware(start)
@@ -290,13 +292,13 @@ class ClinicCore:
         if conn.execute("SELECT 1 FROM appointments WHERE patient_id = %s AND status = 'active'"
                         " AND during && tstzrange(%s, %s, '[)')", [patient_id, start, end]).fetchone():
             raise E.PatientBusy("в это время у вас уже есть другая запись")
-        # Одновременные вставки с exclusion-констрейнтом видят чужие незакоммиченные строки и могут взаимно
-        # заблокироваться (DeadlockDetected). Записи на один день сериализуем; порядок блокировок всегда:
-        # пациент → день.
+        # Concurrent inserts under an exclusion constraint see each other's uncommitted rows and can mutually
+        # block (DeadlockDetected). Bookings for one day are serialised; the lock order is always:
+        # patient → day.
         conn.execute("SELECT pg_advisory_xact_lock(hashtextextended(%s, 0))", [f"book:day:{start.date()}"])
         for ch in ([chair_id] if chair_id else cl.chairs):
             try:
-                with conn.transaction():   # savepoint: неудача на одном кресле не рушит транзакцию
+                with conn.transaction():   # savepoint: a failure on one chair does not break the transaction
                     row = conn.execute(
                         "INSERT INTO appointments (patient_id, service_code, chair_id, during, day, status, source, note,"
                         " actor, idempotency_key, created_at, rescheduled_from_id)"
@@ -307,7 +309,7 @@ class ClinicCore:
             except pgerr.ExclusionViolation as e:
                 if e.diag.constraint_name == "appointments_patient_no_overlap":
                     raise E.PatientBusy("в это время у вас уже есть другая запись") from None
-                continue   # кресло занято: пробуем следующее
+                continue   # chair taken: try the next one
             except pgerr.UniqueViolation as e:
                 if e.diag.constraint_name == "appointments_idempotency":
                     row = conn.execute("SELECT * FROM appointments WHERE patient_id = %s AND idempotency_key = %s",
@@ -316,7 +318,7 @@ class ClinicCore:
                 raise E.DuplicateBooking("на этот день у вас уже есть запись на эту услугу") from None
         raise E.SlotTaken("это время уже занято", alternatives=self._alternatives(conn, svc, start, now))
 
-    # ---------- отмена и перенос ----------
+    # ---------- cancellation and rescheduling ----------
     def _own_active(self, conn, patient_id: int, appointment_id: int, now: datetime) -> dict:
         row = conn.execute("SELECT * FROM appointments WHERE id = %s AND patient_id = %s FOR UPDATE",
                            [appointment_id, patient_id]).fetchone()
@@ -346,7 +348,7 @@ class ClinicCore:
 
     def reschedule(self, patient_id: int, appointment_id: int, new_start: datetime, *, actor: str, now: datetime,
                    idempotency_key: str | None = None, source: str | None = None) -> Appointment:
-        """Старая запись отменяется, новая создаётся в одной транзакции: при отказе старая остаётся."""
+        """The old appointment is cancelled and the new one created in one transaction: on refusal the old one stays."""
         _aware(now); _aware(new_start)
         with self._connect() as conn, conn.transaction():
             self._lock_patient(conn, patient_id)
@@ -376,7 +378,7 @@ class ClinicCore:
 
     def create_handoff(self, patient_id: int | None, reason: str, summary: str, *, now: datetime,
                        appointment_id: int | None = None) -> int:
-        """Передача человеку: структурированная сводка, не сырой диалог."""
+        """Handoff to a human: a structured summary, not the raw dialogue."""
         _aware(now)
         if reason not in self.HANDOFF_REASONS:
             raise E.InvalidInput(f"reason должен быть одним из: {', '.join(self.HANDOFF_REASONS)}")
@@ -385,7 +387,7 @@ class ClinicCore:
             if appointment_id is not None and not conn.execute(
                     "SELECT 1 FROM appointments WHERE id = %s AND patient_id IS NOT DISTINCT FROM %s",
                     [appointment_id, patient_id]).fetchone():
-                appointment_id = None     # чужой/несуществующий id в передачу не попадает
+                appointment_id = None     # someone else's / a non-existent id does not get into the handoff
             return conn.execute(
                 "INSERT INTO handoffs (patient_id, appointment_id, reason, summary, created_at)"
                 " VALUES (%s,%s,%s,%s,%s) RETURNING id", [patient_id, appointment_id, reason, summary, now]
@@ -394,7 +396,7 @@ class ClinicCore:
     INTAKE_DAYS = 14
 
     def issue_intake_token(self, patient_id: int, *, now: datetime) -> str:
-        """Токен ссылки на анкету. В БД только хеш; сам токен возвращается один раз и уходит пациенту ссылкой."""
+        """Intake form link token. Only the hash is stored; the token itself is returned once and goes to the patient as a link."""
         _aware(now)
         token = secrets.token_urlsafe(24)
         with self._connect() as conn, conn.transaction():

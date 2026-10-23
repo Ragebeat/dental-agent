@@ -1,10 +1,10 @@
-"""Разбор относительных дат и времени суток — целиком кодом, без LLM.
+"""Relative dates and times of day, parsed entirely in code, no LLM.
 
-Два входа дают одну и ту же структуру `DateIntent`:
-  • parse_ja(text) — детерминированный разбор частых японских фраз («来週の金曜の午前», «明後日の夕方», «月末»);
-  • LLM может заполнить `DateIntent` сам (JSON-схема — DateIntent.model_json_schema()) для оборотов, которых нет в правилах.
-`resolve(intent, now)` превращает намерение в окно поиска слотов: диапазон дат (не больше 14 дней — лимит search_slots)
-и окно времён начала. Модель дат не считает: неделя — с понедельника, «金曜» без уточнения — ближайшая пятница после сегодня.
+Two entry points produce the same `DateIntent` structure:
+  • parse_ja(text) — deterministic parsing of common Japanese phrases («来週の金曜の午前», «明後日の夕方», «月末»);
+  • the LLM can fill `DateIntent` itself (JSON schema: DateIntent.model_json_schema()) for wordings the rules miss.
+`resolve(intent, now)` turns the intent into a slot-search window: a date range (at most 14 days, the search_slots limit)
+and a window of start times. The model does no date arithmetic: a week starts on Monday, «金曜» alone is the nearest Friday after today.
 """
 from __future__ import annotations
 
@@ -17,8 +17,8 @@ from typing import Literal, Optional
 from pydantic import BaseModel, Field
 
 MAX_DAYS = 14
-WEEKDAY_CHARS = "月火水木金土日"       # 0 = понедельник
-# окна времён НАЧАЛА приёма (включительно); 夕方 = 16:00–18:00 по сценарию s03
+WEEKDAY_CHARS = "月火水木金土日"       # 0 = Monday
+# windows of appointment START times (inclusive); 夕方 = 16:00–18:00 per scenario s03
 PARTS: dict[str, tuple[time, time]] = {
     "morning": (time(9, 0), time(11, 59)),
     "afternoon": (time(12, 0), time(18, 30)),
@@ -54,11 +54,11 @@ class Window(BaseModel):
     date_to: date
     time_from: Optional[time] = None
     time_to: Optional[time] = None
-    truncated: bool = False          # диапазон урезан до 14 дней
+    truncated: bool = False          # range cut down to 14 days
     note: str = ""
 
 
-# ---------- разбор японского текста ----------
+# ---------- parsing Japanese text ----------
 _REL_DAY = (("明後日", 2), ("あさって", 2), ("明日", 1), ("あした", 1), ("あす", 1), ("今日", 0), ("本日", 0), ("きょう", 0))
 _PART_WORDS = (("午前", "morning"), ("朝", "morning"), ("午後", "afternoon"), ("夕方", "evening"), ("夜", "night"), ("晩", "night"))
 _ASAP = re.compile(r"なるべく早く|できるだけ早く|出来るだけ早く|早めに|最短|いつでも|お任せ")
@@ -123,7 +123,7 @@ def parse_ja(text: str) -> DateIntent:
         before = bool(re.search(r"(?<!\d)\d{1,2}(?:時|:\d{2})(?:\s*(?:半|\d{1,2}分))?\s*(?:まで|以前|までに)", t))
         if h < 9 and it.part_of_day in ("afternoon", "evening", "night"):      # 午後3時 → 15:00
             h += 12
-        elif h < 9 and it.part_of_day is None and h >= 1:                      # «3時» без уточнения: клиника работает с 9
+        elif h < 9 and it.part_of_day is None and h >= 1:                      # «3時» with no qualifier: the clinic opens at 9
             h += 12
         if 0 <= h < 24 and 0 <= mi < 60:
             hhmm = f"{h:02d}:{mi:02d}"
@@ -138,7 +138,7 @@ def parse_ja(text: str) -> DateIntent:
     return it
 
 
-# ---------- вычисление окна ----------
+# ---------- computing the window ----------
 def _month_start(d: date, offset: int) -> date:
     idx = d.year * 12 + d.month - 1 + offset
     return date(idx // 12, idx % 12 + 1, 1)
@@ -152,24 +152,24 @@ def resolve(it: DateIntent, now: datetime) -> Window:
         if it.after_months:
             first = _month_start(base, it.after_months)
             base = first.replace(day=min(base.day, calendar.monthrange(first.year, first.month)[1]))
-        lo, hi = base, base + timedelta(days=MAX_DAYS - 1)      # от этой даты ищем ближайший открытый день
+        lo, hi = base, base + timedelta(days=MAX_DAYS - 1)      # search for the nearest open day from this date
     elif it.month and it.day:
         try:
             d = date(today.year, it.month, it.day)
             if d < today:
                 d = date(today.year + 1, it.month, it.day)
         except ValueError:
-            raise ValueError(f"нет такой даты: {it.month}/{it.day}") from None
+            raise ValueError(f"no such date: {it.month}/{it.day}") from None
         lo = hi = d
     elif it.day and not it.month:
         d = None
-        for off in (0, 1):                      # в этом месяце, иначе в следующем
+        for off in (0, 1):                      # this month, otherwise the next
             first = _month_start(today, off)
             if it.day <= calendar.monthrange(first.year, first.month)[1] and first.replace(day=it.day) >= today:
                 d = first.replace(day=it.day)
                 break
         if d is None:
-            raise ValueError(f"нет такой даты: {it.day} числа")
+            raise ValueError(f"no such date: day {it.day}")
         lo = hi = d
     elif it.day_offset is not None:
         lo = hi = today + timedelta(days=it.day_offset)
@@ -179,9 +179,9 @@ def resolve(it: DateIntent, now: datetime) -> Window:
             d = monday + timedelta(days=it.weekday)
             if d < today:
                 d += timedelta(weeks=1)
-                note = "в этой неделе этот день уже прошёл; взят следующий"
+                note = "this weekday has already passed this week; the next one is taken"
         else:
-            d = today + timedelta(days=(it.weekday - today.weekday() - 1) % 7 + 1)      # строго после сегодня
+            d = today + timedelta(days=(it.weekday - today.weekday() - 1) % 7 + 1)      # strictly after today
         lo = hi = d
     elif it.week_offset is not None:
         monday = today - timedelta(days=today.weekday()) + timedelta(weeks=it.week_offset)
@@ -189,7 +189,7 @@ def resolve(it: DateIntent, now: datetime) -> Window:
     elif it.month_offset is not None or it.month_part:
         first = _month_start(today, it.month_offset or 0)
         if it.month_part == "start" and it.month_offset is None and first <= today:
-            first = _month_start(today, 1)          # «月初» сказано посреди месяца → начало следующего
+            first = _month_start(today, 1)          # «月初» said mid-month → the start of the next month
         last = first.replace(day=calendar.monthrange(first.year, first.month)[1])
         if it.month_part == "end":
             lo, hi = last - timedelta(days=6), last

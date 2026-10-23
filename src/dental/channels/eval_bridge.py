@@ -1,5 +1,5 @@
-"""Eval «через LINE»: реплики пациента идут подписанными событиями через вебхук (ASGI, без сети) и шлюз сессий, ответы
-забираются из заглушки Reply API. Критерий E7: те же метрики, что при прямом вызове агента (`--channel web`)."""
+"""Eval "through LINE": patient messages go as signed events through the webhook (ASGI, no network) and the session gateway; replies
+are taken from a Reply API stub. The E7 criterion: the same metrics as when calling the agent directly (`--channel web`)."""
 
 from __future__ import annotations
 
@@ -18,7 +18,7 @@ USER = "Ueval0000000000000000000000000000"
 class LineAgent:
     def __init__(self, core, llm, now: datetime, st) -> None:
         self.sender = RecordingSender()
-        # лимиты частоты и числа ходов отключены: сценарии короткие и быстрые, а лимиты проверяются отдельными тестами
+        # rate and turn limits are off: the scenarios are short and fast, and the limits have their own tests
         self.gw = Gateway(McpSessions(core, llm, lambda: now, max_rounds=st.max_rounds, token_cap=st.token_cap), self.sender,
                           now_fn=lambda: now, ttl_s=3600, rate_per_min=10**6, max_turns=10**6, max_text=10**6)
         self.client = httpx.AsyncClient(transport=httpx.ASGITransport(app=create_app(SECRET, self.gw)), base_url="http://line")
@@ -36,7 +36,7 @@ class LineAgent:
         await self.gw.drain()
         self._agent = self.gw.agent_of(USER) or self._agent
         if self.gw.last_error is not None:
-            raise self.gw.last_error                    # TokenCapReached / LLMError доходят до раннера как при прямом вызове
+            raise self.gw.last_error                    # TokenCapReached / LLMError reach the runner as with a direct call
         return "\n".join("\n".join(t) for _, _, t in self.sender.sent[before:])
 
     @property

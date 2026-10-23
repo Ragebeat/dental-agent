@@ -1,4 +1,4 @@
-"""Разбор реплик пациента: реальные фразы из прогонов."""
+"""Parsing patient messages: real phrases from the runs."""
 import pytest
 
 from dental.agent.dates import DateIntent
@@ -41,7 +41,7 @@ def test_service_only_when_named():
     assert parse_service("来週あたりで歯のクリーニングの予約を", SERVICES) == "cleaning"
     assert parse_service("定期検診で", SERVICES) == "kenshin"
     assert parse_service("初診の予約を取りたい", SERVICES) == "shoshin"
-    assert parse_service("とりあえず歯の状態を見てもらいたいというか…何か治療が必要かどうかも含めて", SERVICES) == "chiryo"   # «治療» названа — это известный компромисс
+    assert parse_service("とりあえず歯の状態を見てもらいたいというか…何か治療が必要かどうかも含めて", SERVICES) == "chiryo"   # «治療» is named — a known trade-off
     assert parse_service("歯の状態を見てもらいたい", SERVICES) is None
 
 

@@ -1,4 +1,4 @@
-"""Заглушка MCP-клиента для тестов графа: маленькая клиника в памяти, без БД и без LLM."""
+"""An MCP client stub for graph tests: a small in-memory clinic, no database and no LLM."""
 import asyncio
 import json
 from datetime import date, datetime
@@ -16,7 +16,7 @@ SERVICES = [{"code": "chiryo", "label_ja": "治療", "minutes": 60}, {"code": "c
 
 class FakeClinic:
     def __init__(self, slots=None, appts=None):
-        self.slots = slots if slots is not None else {                  # дата -> времена начала (любой услуги)
+        self.slots = slots if slots is not None else {                  # date -> start times (any service)
             "2026-10-09": ["16:00", "16:30", "17:00"], "2026-10-13": ["09:00", "09:30", "10:30"],
             "2026-10-14": ["09:00", "09:30", "11:00", "14:00", "15:30"], "2026-10-16": ["09:00", "10:00", "14:00", "15:00"],
             "2026-10-19": ["09:00", "09:30", "11:00"]}
@@ -93,7 +93,7 @@ def appt(i, service, start):
 
 
 def llm_json(*items):
-    """Ответы LLM-запасного пути (JSON-строки); если вызовов больше, чем ответов, — пустой JSON."""
+    """Answers of the LLM fallback path (JSON strings); if there are more calls than answers, empty JSON."""
     class L(FakeLLM):
         def chat(self, messages, tools=None):
             self.calls.append(messages)

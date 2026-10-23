@@ -8,10 +8,10 @@ CAL = ClinicCalendar(CFG)
 
 
 def test_closed_and_open_days():
-    assert not CAL.is_open(date(2026, 10, 8))    # четверг
-    assert not CAL.is_open(date(2026, 10, 11))   # воскресенье
+    assert not CAL.is_open(date(2026, 10, 8))    # Thursday
+    assert not CAL.is_open(date(2026, 10, 11))   # Sunday
     assert not CAL.is_open(date(2026, 10, 12))   # スポーツの日
-    assert not CAL.is_open(date(2027, 1, 7))     # четверг
+    assert not CAL.is_open(date(2027, 1, 7))     # Thursday
     assert not CAL.is_open(date(2027, 1, 11))    # 成人の日
     for d in (date(2026, 10, 9), date(2026, 10, 17), date(2027, 1, 5), date(2027, 1, 12)):
         assert CAL.is_open(d), d

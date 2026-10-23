@@ -1,15 +1,15 @@
-# Профили LLM. Любой профиль = OpenAI-совместимый чат-эндпоинт (его умеют и Ollama, и OpenRouter).
-# Ключ не хранится здесь: в api_key_env указано имя переменной окружения (или строка в .env).
-# Роли выбирают профиль для агента и для симулятора пациента (лучше разные модели: см. docs/DECISIONS.md).
+# LLM profiles. Any profile is an OpenAI-compatible chat endpoint (both Ollama and OpenRouter provide one).
+# The key is not stored here: api_key_env names the environment variable (or a line in .env).
+# Roles pick a profile for the agent and for the patient simulator (preferably different models: see docs/DECISIONS.md).
 
 [roles]
 agent = "local"
 simulator = "or_sim_ds"
 
-[profiles.local]                       # Ollama на этой машине
-# model: ТОЧНЫЙ тег из `ollama list` (колонка NAME). Контекст: /v1-эндпоинт Ollama не принимает num_ctx в запросе,
-# задавайте его на стороне Ollama (переменная OLLAMA_CONTEXT_LENGTH=16384 или Modelfile `PARAMETER num_ctx 16384`),
-# иначе длинный промпт с инструментами молча обрежется.
+[profiles.local]                       # Ollama on this machine
+# model: the EXACT tag from `ollama list` (NAME column). Context: Ollama's /v1 endpoint does not accept num_ctx in the request,
+# set it on the Ollama side (OLLAMA_CONTEXT_LENGTH=16384 or a Modelfile with `PARAMETER num_ctx 16384`),
+# otherwise a long prompt with tools is silently truncated.
 base_url = "http://127.0.0.1:11434/v1"
 model = "gemma4:e4b"
 api_key_env = ""
@@ -17,11 +17,11 @@ temperature = 0.0
 timeout_s = 240
 max_tokens = 1024
 
-# Пример облачного профиля через OpenRouter: раскомментировать, поставить OPENROUTER_API_KEY в .env,
-# выбрать модель на openrouter.ai/models (нужна поддержка tools), и запускать:
+# Example cloud profile via OpenRouter: uncomment, put OPENROUTER_API_KEY into .env,
+# pick a model at openrouter.ai/models (it must support tools), and run:
 #   uv run python -m dental.eval.run --agent-profile or_agent --sim-profile local
-# Облачный агент для сравнения «локальная модель vs облачная» (E8, только синтетические данные).
-# Слаг сверить на openrouter.ai/models (нужна поддержка tools).
+# Cloud agent for the "local model vs cloud model" comparison (E8, synthetic data only).
+# Check the slug at openrouter.ai/models (it must support tools).
 [profiles.or_agent]
 base_url = "https://openrouter.ai/api/v1"
 model = "google/gemini-2.5-flash"
@@ -29,10 +29,10 @@ api_key_env = "OPENROUTER_API_KEY"
 temperature = 0.0
 timeout_s = 120
 max_tokens = 1024
-extra_body = { usage = { include = true } }   # OpenRouter вернёт стоимость запроса в usage.cost
+extra_body = { usage = { include = true } }   # OpenRouter returns the request cost in usage.cost
 
-# Симулятор пациента: сильная модель, чтобы диалог держал роль (gemma 4B в первом прогоне путала роль в 5 сценариях).
-# Слаг сверить на openrouter.ai/models. Ключ OPENROUTER_API_KEY лежит в .env.
+# Patient simulator: a strong model, so the dialogue stays in role (gemma 4B mixed up roles in 5 scenarios in the first run).
+# Check the slug at openrouter.ai/models. The OPENROUTER_API_KEY lives in .env.
 [profiles.or_sim]
 base_url = "https://openrouter.ai/api/v1"
 model = "anthropic/claude-haiku-4.5"
@@ -42,8 +42,8 @@ timeout_s = 120
 max_tokens = 300
 extra_body = { usage = { include = true } }
 
-# Дешёвый симулятор пациента (DeepSeek Flash, слаг закреплён, без алиаса ~…-latest ради воспроизводимости).
-# Не известно, включено ли у модели рассуждение по умолчанию: проверить на 1–2 сценариях по стоимости и латентности.
+# Cheap patient simulator (DeepSeek Flash, slug pinned, no ~…-latest alias, for reproducibility).
+# Unknown whether the model reasons by default: check cost and latency on 1–2 scenarios.
 [profiles.or_sim_ds]
 base_url = "https://openrouter.ai/api/v1"
 model = "deepseek/deepseek-v4.1-flash"

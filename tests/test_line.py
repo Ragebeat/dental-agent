@@ -1,4 +1,4 @@
-"""Канал LINE на заглушках: подпись, порядок, изоляция пользователей, повторная доставка, лимиты. Без БД, LLM и сети."""
+"""The LINE channel on stubs: signature, ordering, user isolation, redelivery, limits. No database, LLM or network."""
 import asyncio
 import contextlib
 import json
@@ -66,7 +66,7 @@ def test_bad_json_is_400_and_empty_verify_event_is_200():
     async def main():
         _, _, gw, app = env()
         bad = await post(app, [], raw=b"not json")
-        ok = await post(app, [])                         # кнопка «Verify» в консоли LINE шлёт пустой список событий
+        ok = await post(app, [])                         # the Verify button in the LINE console sends an empty event list
         await gw.aclose()
         return bad.status_code, ok.status_code
     assert run(main()) == (400, 200)
@@ -114,7 +114,7 @@ def test_users_are_isolated():
         return by, keys, [n for n, _ in ca.calls], [n for n, _ in cb.calls]
     by, keys, ca, cb = run(main())
     assert len(keys) == 2 and "verify_identity" in ca and "verify_identity" not in cb
-    assert "診察券番号" in by["tb1"] and "ご希望の日にち" in by["ta2"]          # B просят назвать карту, у A личность уже подтверждена
+    assert "診察券番号" in by["tb1"] and "ご希望の日にち" in by["ta2"]          # B is asked for the card, A's identity is already verified
 
 
 def test_user_id_is_pseudonymised():
@@ -159,7 +159,7 @@ def test_rate_limit_warns_once_then_stays_quiet():
         await gw.aclose()
         return s.texts()
     texts = run(main())
-    assert len(texts) == 4 and texts.count(line.THROTTLED) == 1          # 3 обработаны, 1 предупреждение, остальные молча
+    assert len(texts) == 4 and texts.count(line.THROTTLED) == 1          # 3 handled, 1 warning, the rest silently
 
 
 def test_failed_reply_falls_back_to_push():

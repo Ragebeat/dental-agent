@@ -1,4 +1,4 @@
-"""Разбор дат кодом: без БД и без LLM. «Сегодня» — среда 2026-10-07 10:00 JST."""
+"""Date parsing in code: no database and no LLM. "Today" is Wednesday 2026-10-07 10:00 JST."""
 from datetime import date, datetime, time
 from zoneinfo import ZoneInfo
 
@@ -16,14 +16,14 @@ def win(text):
 @pytest.mark.parametrize("text, d1, d2, t1, t2", [
     ("明後日の夕方", date(2026, 10, 9), date(2026, 10, 9), time(16, 0), time(18, 0)),            # s03
     ("来週の金曜日の午前中", date(2026, 10, 16), date(2026, 10, 16), time(9, 0), time(11, 59)),   # s14
-    ("来週の水曜日の午前", date(2026, 10, 14), date(2026, 10, 14), time(9, 0), time(11, 59)),     # s02: модель считала 12 октября
+    ("来週の水曜日の午前", date(2026, 10, 14), date(2026, 10, 14), time(9, 0), time(11, 59)),     # s02: the model computed 12 October
     ("来週の火曜", date(2026, 10, 13), date(2026, 10, 13), None, None),
-    ("金曜", date(2026, 10, 9), date(2026, 10, 9), None, None),                                   # ближайшая после сегодня
-    ("水曜日", date(2026, 10, 14), date(2026, 10, 14), None, None),                               # сегодня среда → следующая
+    ("金曜", date(2026, 10, 9), date(2026, 10, 9), None, None),                                   # the nearest after today
+    ("水曜日", date(2026, 10, 14), date(2026, 10, 14), None, None),                               # today is Wednesday → the next one
     ("明日", date(2026, 10, 8), date(2026, 10, 8), None, None),
     ("今日の午後", date(2026, 10, 7), date(2026, 10, 7), time(12, 0), time(18, 30)),
     ("10月20日の午後3時", date(2026, 10, 20), date(2026, 10, 20), time(15, 0), time(15, 0)),
-    ("１０月２０日　１５：３０", date(2026, 10, 20), date(2026, 10, 20), time(15, 30), time(15, 30)),   # полноширинные цифры
+    ("１０月２０日　１５：３０", date(2026, 10, 20), date(2026, 10, 20), time(15, 30), time(15, 30)),   # full-width digits
     ("10/20 10時半", date(2026, 10, 20), date(2026, 10, 20), time(10, 30), time(10, 30)),
     ("3か月後", date(2027, 1, 7), date(2027, 1, 20), None, None),                                 # s08
     ("半年後", date(2027, 4, 7), date(2027, 4, 20), None, None),
@@ -33,10 +33,10 @@ def win(text):
     ("今週", date(2026, 10, 7), date(2026, 10, 11), None, None),
     ("再来週の月曜", date(2026, 10, 19), date(2026, 10, 19), None, None),
     ("月末", date(2026, 10, 25), date(2026, 10, 31), None, None),
-    ("月初", date(2026, 11, 1), date(2026, 11, 7), None, None),                                   # посреди месяца → начало следующего
-    ("3月5日", date(2027, 3, 5), date(2027, 3, 5), None, None),                                   # в этом году прошло → следующий
+    ("月初", date(2026, 11, 1), date(2026, 11, 7), None, None),                                   # mid-month → the start of the next
+    ("3月5日", date(2027, 3, 5), date(2027, 3, 5), None, None),                                   # already passed this year → next year
     ("25日", date(2026, 10, 25), date(2026, 10, 25), None, None),
-    ("3日", date(2026, 11, 3), date(2026, 11, 3), None, None),                                    # 3 октября прошло → ноябрь
+    ("3日", date(2026, 11, 3), date(2026, 11, 3), None, None),                                    # 3 October has passed → November
 ])
 def test_parse_and_resolve(text, d1, d2, t1, t2):
     w = win(text)
@@ -64,7 +64,7 @@ def test_this_week_past_weekday_moves_to_next_week():
 def test_invalid_date_raises():
     with pytest.raises(ValueError):
         resolve(DateIntent(month=2, day=30), NOW)
-    # «31日» в ноябре (30 дней) → 31 декабря
+    # «31日» in November (30 days) → 31 December
     assert resolve(DateIntent(day=31), datetime(2026, 11, 5, tzinfo=ZoneInfo("Asia/Tokyo"))).date_from == date(2026, 12, 31)
 
 

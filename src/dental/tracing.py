@@ -1,27 +1,27 @@
-"""Трассировка: спаны OpenTelemetry с атрибутами OpenInference, смотрим в Phoenix.
+"""Tracing: OpenTelemetry spans with OpenInference attributes, viewed in Phoenix.
 
-Трасса — один диалог от начала до конца, спаны — его шаги: ход пациента → узел графа → вызов LLM / инструмента MCP.
-Журнал прогонов (data/runs.jsonl) говорит, ЧЕМ закончился прогон; трасса — ЧТО происходило внутри одного диалога.
+A trace is one dialogue from start to end; spans are its steps: patient turn → graph node → LLM call / MCP tool call.
+The run log (data/runs.jsonl) says HOW a run ended; a trace says WHAT happened inside one dialogue.
 
-Паттерн перенесён из проекта RAG (там же обоснования): спаны ручные, атрибуты по OpenInference, бэкенд — настройка.
+The pattern is carried over from the RAG project (the reasoning is there too): manual spans, OpenInference attributes, the backend is a setting.
 
-Включается явно. Без TRACE=1 (или tracing.setup(enable=True), например eval --trace) трассировщик пустой,
-ничего не отправляется, тесты и прогоны от сервера Phoenix не зависят. Без установленного opentelemetry — тоже no-op.
+Opt-in. Without TRACE=1 (or tracing.setup(enable=True), e.g. eval --trace) the tracer is empty,
+nothing is sent, and tests and runs do not depend on a Phoenix server. Without opentelemetry installed it is also a no-op.
 
-  docker run -d -p 127.0.0.1:6006:6006 --name phoenix arizephoenix/phoenix   # если ещё не запущен (адрес 127.0.0.1, не localhost)
+  docker run -d -p 127.0.0.1:6006:6006 --name phoenix arizephoenix/phoenix   # if not running yet (address 127.0.0.1, not localhost)
   uv run python -m dental.eval.run --agent graph --scenarios s01 --repeats 1 --trace
-  -> http://127.0.0.1:6006, проект dental-agent
+  -> http://127.0.0.1:6006, project dental-agent
 
-Содержимое ВЫКЛЮЧЕНО по умолчанию (клиника — медицинские данные, SPEC: «трассы без содержимого диалогов»): реплики пациента и
-агента, промпты, аргументы инструментов заменяются на «[скрыто: N симв.]», длина остаётся. Метаданные (узлы, токены, задержки,
-finish_reason, коды результатов инструментов, ссылки, вердикт) пишутся всегда. Для отладки на синтетике:
+Content is OFF by default (a clinic means medical data; SPEC: "traces without dialogue content"): patient and
+agent messages, prompts and tool arguments are replaced with "[hidden: N chars]", the length stays. Metadata (nodes, tokens, latency,
+finish_reason, tool result codes, references, the verdict) is always written. For debugging on synthetic data:
 
   $env:TRACE_CONTENT=1
 
-и тогда текст всё равно проходит scrub(): телефоны, даты рождения, 6-значные номера карт → [PHONE] [BIRTH] [CARD].
-Имена регулярками не поймать — полное содержимое пригодно только для синтетических данных, не для реальных пациентов.
+and then the text still goes through scrub(): phones, birth dates, 6-digit card numbers → [PHONE] [BIRTH] [CARD].
+Names cannot be caught with regexes — full content is fit only for synthetic data, not for real patients.
 
-Маска живёт в одном месте — set_attrs(); вызвать запись атрибута в обход неё нельзя.
+The mask lives in one place, set_attrs(); there is no way to write an attribute around it.
 """
 
 from __future__ import annotations
@@ -35,12 +35,12 @@ try:
     from opentelemetry import trace
     from opentelemetry.trace import Status, StatusCode
     _OTEL = True
-except ImportError:          # pragma: no cover  — opentelemetry не установлен: трассировки нет, код работает
+except ImportError:          # pragma: no cover  — opentelemetry not installed: no tracing, the code still works
     _OTEL = False
 
 PROJECT = os.environ.get("TRACE_PROJECT", "dental-agent")
-# HTTP на порт UI Phoenix, задан явно (register() по умолчанию идёт в gRPC 4317, который из docker не опубликован).
-# 127.0.0.1, а не localhost: на Windows localhost сначала разрешается в IPv6 и каждый запрос ждёт таймаут.
+# HTTP to the Phoenix UI port, set explicitly (register() defaults to gRPC 4317, which the docker container does not publish).
+# 127.0.0.1, not localhost: on Windows localhost resolves to IPv6 first and every request waits for a timeout.
 ENDPOINT = os.environ.get("PHOENIX_COLLECTOR_ENDPOINT", "http://127.0.0.1:6006/v1/traces")
 MAX_TEXT = 8000
 
@@ -52,13 +52,13 @@ _tracer = trace.get_tracer("dental-agent") if _OTEL else None
 _enabled = False
 
 _PHONE = re.compile(r"(?<!\d)0\d{1,4}[-ー−\s]?\d{1,4}[-ー−\s]?\d{3,4}(?!\d)")
-# годы до 2025: даты записи (2026+) под маску рождения не попадают; когда «сейчас» уйдёт дальше, границу нужно двигать
+# years before 2025: appointment dates (2026+) do not fall under the birth-date mask; once "now" moves further, the boundary must move
 _BIRTH = re.compile(r"(?<!\d)(?:19\d{2}|20[01]\d|202[0-5])\s*[-/.年]\s*\d{1,2}\s*[-/.月]\s*\d{1,2}\s*日?")
 _CARD = re.compile(r"(?<!\d)\d{6}(?!\d)")
 
 
 def scrub(text: str) -> str:
-    """Телефоны, даты рождения, номера карт → метки. Применяется ко всему содержимому, попадающему в трассу."""
+    """Phones, birth dates, card numbers → labels. Applied to all content that enters a trace."""
     text = _BIRTH.sub("[BIRTH]", text)
     text = _PHONE.sub("[PHONE]", text)
     return _CARD.sub("[CARD]", text)
@@ -69,19 +69,19 @@ def enabled() -> bool:
 
 
 def setup(project: str | None = None, enable: bool = False) -> bool:
-    """Вызвать один раз в точке входа. Ничего не делает без TRACE=1 / enable=True. Возвращает, включена ли трассировка."""
+    """Call once at the entry point. Does nothing without TRACE=1 / enable=True. Returns whether tracing is on."""
     global _tracer, _enabled
     if not (enable or os.environ.get("TRACE") == "1") or not _OTEL:
         return False
     from phoenix.otel import register
-    # auto_instrument=False: клиент LLM свой (httpx), автоинструментировать нечего, а скрытые спаны хуже отсутствующих.
+    # auto_instrument=False: the LLM client is our own (httpx), there is nothing to auto-instrument, and hidden spans are worse than none.
     provider = register(project_name=project or PROJECT, endpoint=ENDPOINT, auto_instrument=False)
     _tracer, _enabled = provider.get_tracer("dental-agent"), True
     return True
 
 
 def use_provider(provider) -> None:
-    """Для тестов: подставить провайдер с in-memory экспортёром."""
+    """For tests: plug in a provider with an in-memory exporter."""
     global _tracer, _enabled
     _tracer, _enabled = provider.get_tracer("dental-agent"), True
 
@@ -102,11 +102,11 @@ def _is_content(key: str) -> bool:
 
 def _redact(v) -> str:
     s = v if isinstance(v, str) else json.dumps(v, ensure_ascii=False, default=str)
-    return f"[скрыто: {len(s)} симв.]"
+    return f"[hidden: {len(s)} chars]"
 
 
 def set_attrs(sp, attrs: dict | None) -> None:
-    """Единственное место записи атрибутов: маска содержимого здесь, обойти её нельзя."""
+    """The only place attributes are written: the content mask is here and cannot be bypassed."""
     for k, v in (attrs or {}).items():
         if v is None:
             continue
@@ -123,7 +123,7 @@ class _NoSpan:
 
 @contextlib.contextmanager
 def span(name: str, kind: str, input=None, attrs: dict | None = None):
-    """Спан вида OpenInference: AGENT, CHAIN, LLM, TOOL. Статус ставится явно (ручной спан иначе уходит UNSET)."""
+    """An OpenInference-style span: AGENT, CHAIN, LLM, TOOL. The status is set explicitly (a manual span otherwise ends up UNSET)."""
     if not (_OTEL and _enabled):
         yield _NoSpan()
         return
@@ -135,7 +135,7 @@ def span(name: str, kind: str, input=None, attrs: dict | None = None):
         try:
             yield sp
         except Exception as e:
-            # Текст исключения может нести содержимое (ошибка запроса повторяет реплику): без флага — только тип.
+            # An exception's text can carry content (a request error repeats the message): without the flag, only the type.
             if CONTENT:
                 sp.record_exception(e)
                 desc = scrub(str(e)[:200])
@@ -148,7 +148,7 @@ def span(name: str, kind: str, input=None, attrs: dict | None = None):
 
 
 def llm_request(sp, profile, messages: list[dict], tools=None, max_tokens=None) -> None:
-    """История чата плоским списком (OTel не принимает список словарей — он молча теряется)."""
+    """Chat history as a flat list (OTel does not accept a list of dicts — it is silently dropped)."""
     attrs = {"llm.model_name": profile.model, "llm.provider": profile.name,
              "llm.invocation_parameters": json.dumps({"temperature": profile.temperature, "max_tokens": max_tokens or profile.max_tokens})}
     for i, m in enumerate(messages):
@@ -160,7 +160,7 @@ def llm_request(sp, profile, messages: list[dict], tools=None, max_tokens=None) 
 
 
 def llm_response(sp, reply) -> None:
-    """Токены, задержка и finish_reason: length означает, что ответ оборван лимитом (так нашли обрыв в сводке)."""
+    """Tokens, latency and finish_reason: length means the answer was cut off by the limit (that is how the cut-off in the summary was found)."""
     attrs = {
         "llm.output_messages.0.message.role": "assistant",
         "llm.output_messages.0.message.content": reply.text or "",

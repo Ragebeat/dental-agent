@@ -1,10 +1,12 @@
-"""Инструменты агента: тонкая обёртка над ClinicCore без зависимости от MCP SDK.
+"""Agent tools: a thin wrapper over ClinicCore with no dependency on the MCP SDK.
 
-Принципы:
-- LLM не передаёт patient_id: пациент фиксируется в сессии через verify_identity / register_new_patient;
-- любой отказ ядра возвращается словарём {ok: False, error, message, ...}, а не исключением;
-- ключ идемпотентности строит сервер, а не модель;
-- в ответах нет данных других пациентов и нет свободного текста пациента (note не возвращается).
+Principles:
+- the LLM never passes patient_id: the patient is fixed in the session through verify_identity / register_new_patient;
+- any core refusal comes back as a dict {ok: False, error, message, ...}, not as an exception;
+- the server builds the idempotency key, not the model;
+- responses contain no other patients' data and no free text from the patient (note is not returned).
+
+Messages inside tool results stay in Russian on purpose: the model reads them (see core/errors.py).
 """
 
 from __future__ import annotations
@@ -40,7 +42,7 @@ def _time(s: str | None, what: str) -> time | None:
 
 
 class DentalTools:
-    """Одна сессия = один разговор = один (или ни одного) проверенный пациент."""
+    """One session = one conversation = one (or no) verified patient."""
 
     def __init__(self, core: ClinicCore, *, now_fn: Callable[[], datetime], channel: str = "web",
                  session_id: str | None = None) -> None:
@@ -49,10 +51,10 @@ class DentalTools:
         self.channel = channel                      # web | line
         self.session_id = session_id or uuid.uuid4().hex
         self.patient: Patient | None = None
-        self._cancel_epoch = 0                      # после отмены тот же слот можно снова забронировать
+        self._cancel_epoch = 0                      # after a cancellation the same slot can be booked again
         self.tz: ZoneInfo = core.clinic.calendar.tz
 
-    # ---------- служебное ----------
+    # ---------- internals ----------
     def _call(self, fn: Callable[[], dict]) -> dict:
         try:
             return {"ok": True, **fn()}
@@ -81,7 +83,7 @@ class DentalTools:
                 "start": a.start.isoformat(timespec="minutes"), "end": a.end.isoformat(timespec="minutes"),
                 "status": a.status}
 
-    # ---------- без проверки личности ----------
+    # ---------- no identity check needed ----------
     def list_services(self) -> dict:
         def run():
             cl = self.core.clinic
@@ -148,7 +150,7 @@ class DentalTools:
             return {"handoff_id": hid, "message": "передано сотруднику клиники; он свяжется с пациентом"}
         return self._call(run)
 
-    # ---------- после проверки личности ----------
+    # ---------- after the identity check ----------
     def get_my_appointments(self) -> dict:
         def run():
             p = self._need_patient()

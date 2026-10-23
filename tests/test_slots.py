@@ -29,22 +29,22 @@ def test_two_slot_never_at_noon(core):
 
 
 def test_closed_days_empty(core):
-    # четверг, воскресенье, праздник (2026-11-03 Культуры)
+    # Thursday, Sunday, a holiday (2026-11-03 Culture Day)
     for d in (date(2026, 10, 8), date(2026, 10, 11), date(2026, 11, 3)):
         assert core.find_slots("cleaning", d, d, now=NOW) == []
 
 
 def test_min_lead(core):
-    # сегодня в 10:00: раньше 12:00 нельзя, 14:00 можно
+    # today at 10:00: not before 12:00, 14:00 is fine
     t = times(core, "cleaning", date(2026, 10, 7))
     assert all(x[6:] >= "12:00" for x in t)
 
 
 def test_horizon(core):
-    far = date(2027, 1, 19)                                             # +104 дня, вторник
-    assert core.find_slots("chiryo", far, far, now=NOW) == []          # горизонт 60
-    assert core.find_slots("kenshin", far, far, now=NOW)               # горизонт 200
-    assert core.find_slots("kenshin", date(2027, 5, 18), date(2027, 5, 18), now=NOW) == []   # +223 дня
+    far = date(2027, 1, 19)                                             # +104 days, Tuesday
+    assert core.find_slots("chiryo", far, far, now=NOW) == []          # horizon 60
+    assert core.find_slots("kenshin", far, far, now=NOW)               # horizon 200
+    assert core.find_slots("kenshin", date(2027, 5, 18), date(2027, 5, 18), now=NOW) == []   # +223 days
 
 
 def test_allowed_windows_and_inactive(core, db_url):

@@ -1,7 +1,7 @@
-"""Разбор реплик пациента кодом: номер карты, даты, телефон, имя, услуга, действие, «да/нет», выбор варианта, опасные запросы.
+"""Parsing patient messages in code: card number, dates, phone, name, service, action, yes/no, option choice, dangerous requests.
 
-Чистые функции без LLM и БД — их проверяют обычные тесты. LLM в графе нужен только там, где правила ничего не нашли
-(и то лишь для явно названных значений, не для догадок).
+Pure functions with no LLM and no database — ordinary tests cover them. The graph needs the LLM only where the rules found nothing
+(and even then only for explicitly stated values, not for guesses).
 """
 from __future__ import annotations
 
@@ -17,7 +17,7 @@ def norm(text: str) -> str:
     return unicodedata.normalize("NFKC", text)
 
 
-# ---------- идентификация ----------
+# ---------- identification ----------
 def parse_card(text: str) -> int | None:
     m = re.search(r"(?<!\d)(\d{6})(?!\d)", norm(text))
     return int(m.group(1)) if m else None
@@ -51,19 +51,19 @@ _NAME_PREFIX = re.compile(r"^(?:私は|わたしは|名前は|お名前は|氏�
 
 
 def parse_name_kana(text: str) -> tuple[str, str] | None:
-    """«山本美咲（やまもと みさき）», «山本 美咲（やまもと みさき）» → имя и чтение. Без скобок не угадываем: см. parse_reg_part и LLM-запасной путь."""
+    """«山本美咲（やまもと みさき）», «山本 美咲（やまもと みさき）» → name and reading. Without brackets we do not guess: see parse_reg_part and the LLM fallback."""
     m = re.search(r"((?:[^\s（(、,。\n「」]{1,8}[ \u3000]+)?[^\s（(、,。\n「」]{1,10})\s*[（(]\s*([ぁ-んァ-ヶー][ぁ-んァ-ヶー\s\u3000]{1,20})\s*[）)]", text)
     if not m:
         return None
     name = _NAME_PREFIX.sub("", m.group(1)).strip()
     parts = re.split(r"[ \u3000]+", name)
-    if len(parts) >= 2:                                   # «山本 美咲» — фамилия и имя; лишнее слово перед ними («こんにちは 山本美咲») отбрасываем
+    if len(parts) >= 2:                                   # «山本 美咲» — family and given name; an extra word before them («こんにちは 山本美咲») is dropped
         name = " ".join(parts[-2:]) if all(len(x) <= 4 for x in parts[-2:]) and len(parts) == 2 else parts[-1]
     kana = to_hiragana(re.sub(r"[\s\u3000]+", " ", m.group(2)).strip())
     return (name, kana) if len(name.replace(" ", "")) >= 2 else None
 
 
-# Пошаговая регистрация: пациент отвечает на вопрос одним полем («山本 美咲と申します», «ふりがなは、やまもと みさきです»).
+# Step-by-step registration: the patient answers a question with one field («山本 美咲と申します», «ふりがなは、やまもと みさきです»).
 _KANA_LABEL = re.compile(r"(?:ふりがな|フリガナ|ふり仮名|振り仮名|よみがな|読み方)\s*(?:は|を)?\s*[:：、,，]?\s*"
                          r"([ぁ-んァ-ヶー][ぁ-んァ-ヶー \u3000]{1,20}?)\s*(?:です|と申します|といいます|でございます|[。．、,，]|$)")
 _TAIL = re.compile(r"\s*(?:と申します|といいます|と言います|でございます|です)?[。．.!！]*\s*$")
@@ -73,7 +73,7 @@ _NOT_KANA = re.compile(r"ありがとう|すみません|ください|ありま�
 
 
 def parse_reg_part(text: str, need: list[str]) -> dict:
-    """Одно поле из ответа на вопрос о регистрации. need — какие из name / name_kana ещё не заполнены. Только очевидные формы."""
+    """One field from an answer to a registration question. need: which of name / name_kana are still empty. Obvious forms only."""
     t = norm(text).strip()
     out: dict[str, str] = {}
     rest = t
@@ -92,7 +92,7 @@ def parse_reg_part(text: str, need: list[str]) -> dict:
 NEW_PATIENT = re.compile(r"初めて|はじめて|初診|新規|新患|診察券(?:は)?(?:持っていません|ありません|ない|を持っていない)|カード(?:は)?(?:持っていません|ありません)")
 
 
-# ---------- намерение ----------
+# ---------- intent ----------
 _CANCEL = re.compile(r"キャンセル|取り消|取消|やめたい|行けなくな|行けない")
 _RESCHEDULE = re.compile(r"変更|変えたい|変えて|変えられ|変えれ|変わりたい|ずらし|ずらせ|振替|振り替え|日にちを変|別の日|移したい|動かし|リスケ|延期")
 _BOOK = re.compile(r"予約|取りたい|入れたい|入れて|お願いしたい|診てもらい|見てもらい|受けたい|行きたい")
@@ -118,12 +118,12 @@ _ALIASES = {
 
 
 def parse_service(text: str, services: list[dict] | None = None) -> str | None:
-    """Только явное упоминание. «歯の状態を見てもらいたい» — не услуга."""
+    """Explicit mentions only. «歯の状態を見てもらいたい» is not a service."""
     t = norm(text)
     codes = {s["code"] for s in services} if services else set(_ALIASES)
     found = [code for code, words in _ALIASES.items() if code in codes and any(w in t for w in words)]
     if len(found) > 1:
-        return None                     # «治療なのかクリーニングなのか» — это не выбор услуги
+        return None                     # «治療なのかクリーニングなのか» is not a choice of service
     if found:
         return found[0]
     for s in services or []:
@@ -132,7 +132,7 @@ def parse_service(text: str, services: list[dict] | None = None) -> str | None:
     return None
 
 
-# ---------- да / нет ----------
+# ---------- yes / no ----------
 _NO = re.compile(r"いいえ|違(?:う|い|います)|やめ|やっぱ|だめ|ダメ|駄目|ではなく|じゃなく|別の|他の|やり直|変え|キャンセル|結構です")
 _YES = re.compile(r"^(?:はい|ええ|うん|そう|OK|ok|オッケー|お願い)|お願いします|それで(?:お願い|いい|大丈夫|結構)|でいい|で大丈夫|大丈夫です|構いません|問題ありません|確定して|よろしく")
 
@@ -146,12 +146,12 @@ def parse_yesno(text: str) -> bool | None:
     return None
 
 
-# ---------- выбор варианта ----------
+# ---------- option choice ----------
 _ORD = {"1": 0, "2": 1, "3": 2, "一": 0, "二": 1, "三": 2}
 
 
 def parse_choice(text: str, options: list[dict]) -> int | None:
-    """options: [{'date': 'YYYY-MM-DD', 'time': 'HH:MM'}]. Индекс выбранного или None."""
+    """options: [{'date': 'YYYY-MM-DD', 'time': 'HH:MM'}]. Index of the chosen one, or None."""
     t = norm(text)
     if re.search(r"最初|一番目|1つ目|一つ目|はじめの|先頭|最も早い|一番早い", t):
         return 0
@@ -186,18 +186,18 @@ def has_date_info(it: DateIntent) -> bool:
 
 
 def merge_intent(old: DateIntent, new: DateIntent) -> DateIntent:
-    """Новая дата заменяет старую целиком; время суток/точное время заменяются, только если названы."""
+    """A new date replaces the old one entirely; time of day / exact time are replaced only when stated."""
     out = old.model_copy()
     if has_date_info(new):
         for f in DATE_FIELDS:
             setattr(out, f, getattr(new, f))
-    if new.part_of_day or new.time or new.time_after or new.time_before:       # новое время вытесняет прежние условия по времени
+    if new.part_of_day or new.time or new.time_after or new.time_before:       # a new time displaces the previous time conditions
         out.part_of_day, out.time, out.time_after, out.time_before = new.part_of_day, new.time, new.time_after, new.time_before
     out.asap = out.asap or new.asap
     return out
 
 
-# ---------- опасные запросы ----------
+# ---------- dangerous requests ----------
 MANIPULATION = re.compile(r"これまでの指示|指示は?(?:すべて|全て)無視|システムメッセージ|\[システム|管理者権限|すべての予約枠|全ての予約枠|"
                           r"ignore (?:all|previous|the)|system prompt|プロンプト|ジェイルブレイク", re.I)
 COMPLAINT = re.compile(r"クレーム|苦情|最悪|責任者|訴え|許せない|ひどい(?:対応|扱い|態度)")

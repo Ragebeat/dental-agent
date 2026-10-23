@@ -165,7 +165,7 @@ A morning briefing (about 08:30, before opening) for the clinic owner, built onl
 One dialogue is one trace: `dialog` → `turn` → graph `node.*` → `tool.*` and `llm.chat` (model, tokens, latency, `finish_reason`). Eval tags on the root span (`eval.scenario`, `eval.outcome_ok`, `eval.wrong_booking`, `eval.agent_tokens`, …) let you filter failures in the UI.
 
 - **Off by default** (`TRACE=1` or `eval.run --trace`). Without it the tracer is empty and nothing leaves the machine.
-- **Content is hidden by default.** Patient messages, prompts and tool arguments are replaced with `[скрыто: N симв.]` (Russian for “hidden: N chars”; the placeholder keeps only the length). `TRACE_CONTENT=1` shows text after a scrubber masks phone numbers, birth dates and 6-digit card numbers. Names cannot be masked reliably by regular expressions, so full content is for synthetic data only. The mask lives in one function, so it cannot be bypassed by a new call site.
+- **Content is hidden by default.** Patient messages, prompts and tool arguments are replaced with `[hidden: N chars]` (only the length is kept). `TRACE_CONTENT=1` shows text after a scrubber masks phone numbers, birth dates and 6-digit card numbers. Names cannot be masked reliably by regular expressions, so full content is for synthetic data only. The mask lives in one function, so it cannot be bypassed by a new call site.
 - Tests check that no card number, birth date, name or message text reaches span attributes.
 - The owner summary is deliberately not traced: it is a batch job over aggregates, not a conversation with a patient.
 
@@ -278,7 +278,7 @@ docs/            SPEC, DECISIONS, FIXTURES, INTAKE, SCENARIO_FORMAT
 tests/
 ```
 
-Documentation: [`docs/SPEC.md`](docs/SPEC.md) (the original specification), [`docs/DECISIONS.md`](docs/DECISIONS.md) (41 numbered decisions with measurements; where it differs from SPEC, DECISIONS wins), [`docs/SCENARIO_FORMAT.md`](docs/SCENARIO_FORMAT.md), [`docs/FIXTURES.md`](docs/FIXTURES.md), [`docs/INTAKE.md`](docs/INTAKE.md). The specification and decision log are written in Russian.
+Documentation: [`docs/SPEC.md`](docs/SPEC.md) (the original specification), [`docs/DECISIONS.md`](docs/DECISIONS.md) (42 numbered decisions with measurements; where it differs from SPEC, DECISIONS wins), [`docs/SCENARIO_FORMAT.md`](docs/SCENARIO_FORMAT.md), [`docs/FIXTURES.md`](docs/FIXTURES.md), [`docs/INTAKE.md`](docs/INTAKE.md). All documentation is in English. A few strings in the code stay in Russian on purpose — prompts and tool texts the models read, and the run-report format that old runs are recomputed from — see DECISIONS #42.
 
 ---
 

@@ -1,4 +1,4 @@
-"""Граф LangGraph на заглушке клиники: переходы, подтверждение, передача человеку, защита от выдумок."""
+"""The LangGraph graph on a clinic stub: transitions, confirmation, handoff to a human, protection against fabrications."""
 import re
 
 from graph_helpers import Dialog, FakeClinic, appt, llm_json
@@ -11,7 +11,7 @@ def test_booking_happy_path_confirms_only_after_tool():
     r = d.say("クリーニングの予約をお願いしたいです")
     assert "AIの予約アシスタント" in r and "診察券番号" in r and not d.called("book_appointment")
     r = d.say(ID)
-    assert "ご希望の日にち" in r and not d.called("search_slots")           # даты не было — спрашиваем
+    assert "ご希望の日にち" in r and not d.called("search_slots")           # no date given — ask for one
     r = d.say("来週の水曜の午後")
     assert "10月14日" in r and "14:00" in r and "15:30" in r
     r = d.say("2番でお願いします")
@@ -153,7 +153,7 @@ def test_slot_taken_between_proposal_and_confirmation():
     d = Dialog()
     d.say(ID + "来週の水曜にクリーニングの予約を取りたい")
     d.say("1番")
-    d.clinic.slots["2026-10-14"].remove("09:00")                 # кто-то занял слот
+    d.clinic.slots["2026-10-14"].remove("09:00")                 # someone took the slot
     r = d.say("はい")
     assert "先に埋まってしまいました" in r and "ご予約を承りました" not in r
 
@@ -200,7 +200,7 @@ def test_exact_time_missing_offers_same_day_neighbours_first():
 
 
 def test_stepwise_registration_is_not_handed_off():
-    """h10: пациент сообщает данные по частям — это прогресс, а не неясность."""
+    """h10: the patient gives the data in parts — that is progress, not ambiguity."""
     d = Dialog()
     d.say("初めての予約をお願いします。来週の金曜日の午後に初診を入れたいです")
     d.say("山本 美咲と申します。")

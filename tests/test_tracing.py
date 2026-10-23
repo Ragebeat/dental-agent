@@ -1,4 +1,4 @@
-"""Трассировка: метаданные пишутся, содержимое и персональные данные в трассу не попадают (без базы и без Phoenix)."""
+"""Tracing: metadata is written, content and personal data never enter the trace (no database, no Phoenix)."""
 import httpx
 import pytest
 
@@ -51,13 +51,13 @@ def test_dialog_trace_has_structure_and_no_content_by_default(spans, monkeypatch
     names = [s.name for s in got]
     assert names.count("turn") == 5 and "node.ingest" in names and "tool.verify_identity" in names and "tool.book_appointment" in names
     turn_ids = {s.context.span_id for s in got if s.name == "turn"}
-    assert all(s.parent.span_id in turn_ids for s in got if s.name.startswith("node."))           # узлы вложены в ход
+    assert all(s.parent.span_id in turn_ids for s in got if s.name.startswith("node."))           # nodes nest inside the turn
     verify = next(s for s in got if s.name == "tool.verify_identity")
     assert verify.attributes["tool.ok"] is True
     blob = _blob(spans)
     for secret in SECRETS:
         assert secret not in blob, secret
-    assert "[скрыто:" in blob
+    assert "[hidden:" in blob
 
 
 def test_content_flag_keeps_text_but_scrubs_personal_data(spans, monkeypatch):

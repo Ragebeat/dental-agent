@@ -1,4 +1,4 @@
-"""Метрики прогона (раздел 6.4 ТЗ). Считаются из результатов сценариев, а не хранятся: определение метрики можно менять и пересчитывать."""
+"""Run metrics (SPEC section 6.4). Computed from scenario results rather than stored, so a metric definition can change and be recomputed."""
 
 from __future__ import annotations
 
@@ -38,7 +38,7 @@ def compute(results: list[dict]) -> dict:
         "runs": n,
         "infra_errors": n - len(ok_runs),
         "outcome_rate": _ratio(sum(x["outcome_ok"] for x in v), n),
-        # v1-результаты (первый прогон) не хранят hard_error/off_spec: выводим из инвариантов и stray
+        # v1 results (the first run) store no hard_error/off_spec: derived from invariants and stray
         "wrong_booking_runs": sum(x.get("hard_error", bool(x["invariants"])) for x in v),
         "off_spec_runs": sum(x.get("off_spec", bool(x.get("stray"))) for x in v),
         "duplicate_runs": sum(any("дубль" in i for i in x["invariants"]) for x in v),

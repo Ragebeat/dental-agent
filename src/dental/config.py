@@ -1,8 +1,9 @@
-"""Загрузка и проверка clinic.toml (Pydantic, extra=forbid: опечатка в ключе падает сразу)."""
+"""Loading and validating clinic.toml (Pydantic, extra=forbid: a typo in a key fails at once)."""
 
 from __future__ import annotations
 
 import hashlib
+import json
 import tomllib
 from datetime import datetime, time
 from pathlib import Path
@@ -50,7 +51,7 @@ class Service(_Strict):
     duration_slots: int = 1
     new_patient_only: bool = False
     recall_months: int | None = None
-    # None = взять значение из [rules]
+    # None = take the value from [rules]
     horizon_days: int | None = None
     min_lead_hours: int | None = None
     cancel_before_hours: int | None = None
@@ -90,18 +91,18 @@ class ClinicConfig(_Strict):
             o = sh.open.hour * 60 + sh.open.minute
             c = sh.close.hour * 60 + sh.close.minute
             if c <= o or o % slot or c % slot:
-                raise ValueError(f"смена {sh.open}-{sh.close} не ложится на сетку {slot} мин")
+                raise ValueError(f"shift {sh.open}-{sh.close} does not fit the {slot}-minute grid")
         syn = self.synthetic
         if set(syn.service_mix) != set(self.services):
-            raise ValueError("synthetic.service_mix и services содержат разные услуги")
+            raise ValueError("synthetic.service_mix and services list different services")
         if abs(sum(syn.service_mix.values()) - 1) > 1e-6:
-            raise ValueError("доли synthetic.service_mix в сумме не дают 1")
+            raise ValueError("the synthetic.service_mix shares do not add up to 1")
         if len(syn.load.by_weeks_ahead) != syn.schedule_weeks:
-            raise ValueError("длина load.by_weeks_ahead должна равняться schedule_weeks")
+            raise ValueError("the length of load.by_weeks_ahead must equal schedule_weeks")
         return self
 
     def now(self) -> datetime:
-        """Замороженное «сейчас» в часовом поясе клиники."""
+        """The frozen "now" in the clinic's time zone."""
         return self.synthetic.frozen_now.astimezone(ZoneInfo(self.clinic.timezone))
 
     def horizon_days(self, code: str) -> int:
@@ -115,5 +116,9 @@ def load_config(path: Path = CONFIG_PATH) -> ClinicConfig:
 
 
 def config_sha(path: Path = CONFIG_PATH) -> str:
-    """Короткий отпечаток файла конфигурации (для журнала прогонов, как в RAG)."""
-    return hashlib.sha256(path.read_bytes()).hexdigest()[:12]
+    """A short fingerprint of the configuration's content (for the run log, as in the RAG project).
+
+    Hashes the parsed TOML, not the file bytes: comments and formatting do not change it (DECISIONS #42)."""
+    with open(path, "rb") as f:
+        data = tomllib.load(f)
+    return hashlib.sha256(json.dumps(data, sort_keys=True, ensure_ascii=False, default=str).encode()).hexdigest()[:12]

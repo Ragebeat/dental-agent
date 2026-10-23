@@ -1,4 +1,4 @@
-"""Подключение к Postgres. DATABASE_URL из окружения, иначе из .env, иначе из POSTGRES_* (порт 5441)."""
+"""Postgres connection. DATABASE_URL from the environment, else from .env, else from POSTGRES_* (port 5441)."""
 
 from __future__ import annotations
 
@@ -37,7 +37,7 @@ def database_url() -> str:
     user = os.environ.get("POSTGRES_USER") or env.get("POSTGRES_USER", "dental")
     password = os.environ.get("POSTGRES_PASSWORD") or env.get("POSTGRES_PASSWORD")
     if not password:
-        raise RuntimeError("не задан ни DATABASE_URL, ни POSTGRES_PASSWORD (см. .env.example)")
+        raise RuntimeError("neither DATABASE_URL nor POSTGRES_PASSWORD is set (see .env.example)")
     db = os.environ.get("POSTGRES_DB") or env.get("POSTGRES_DB", "dental")
     return f"postgresql://{quote(user)}:{quote(password)}@127.0.0.1:{DEFAULT_PORT}/{db}"
 

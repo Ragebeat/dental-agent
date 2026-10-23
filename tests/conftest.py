@@ -1,5 +1,5 @@
-"""Тесты ядра идут на живом Postgres: для сессии строится шаблонная БД (миграции + снимок),
-для каждого теста из неё делается копия (CREATE DATABASE ... TEMPLATE). Нет БД: тесты пропускаются."""
+"""Core tests run against a live Postgres: a template database is built per session (migrations + snapshot),
+and each test gets a copy of it (CREATE DATABASE ... TEMPLATE). No database: the tests are skipped."""
 
 import pytest
 
@@ -19,7 +19,7 @@ def admin_url():
         with connect(with_dbname(url, "postgres")):
             pass
     except Exception as e:  # noqa: BLE001
-        pytest.skip(f"нет доступа к Postgres ({type(e).__name__}); подними docker compose и задай .env")
+        pytest.skip(f"no access to Postgres ({type(e).__name__}); start docker compose and set .env")
     return url
 
 

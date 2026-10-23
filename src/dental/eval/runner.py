@@ -1,4 +1,4 @@
-"""Прогон одного сценария: чистая БД из шаблона → диалог агент ↔ симулятор через MCP → проверки кодом."""
+"""Running one scenario: a clean database from the template → agent ↔ simulator dialogue over MCP → checks in code."""
 
 from __future__ import annotations
 
@@ -27,7 +27,7 @@ class RunSettings:
     token_cap: int = 150_000
     keep_db: bool = False
     agent: str = "baseline"            # baseline | graph
-    channel: str = "web"               # web (прямой вызов агента) | line (через вебхук LINE и шлюз сессий, E7)
+    channel: str = "web"               # web (direct agent call) | line (through the LINE webhook and session gateway, E7)
 
 
 async def _dialog(sc: Scenario, core: ClinicCore, cfg: ClinicConfig, agent_llm: LLM, sim_llm: LLM,
@@ -55,7 +55,7 @@ async def _dialog(sc: Scenario, core: ClinicCore, cfg: ClinicConfig, agent_llm: 
                 if ended and not text:
                     ended_by = "patient_end"
                     break
-                reply = await agent.reply(text)          # последняя реплика с <END> тоже уходит агенту («はい» = подтверждение)
+                reply = await agent.reply(text)          # the last message with <END> also goes to the agent («はい» = a confirmation)
                 transcript.append({"role": "agent", "text": reply})
                 if ended:
                     ended_by = "patient_end"
@@ -76,7 +76,7 @@ async def _dialog(sc: Scenario, core: ClinicCore, cfg: ClinicConfig, agent_llm: 
 
 def run_scenario(sc: Scenario, cfg: ClinicConfig, agent_llm: LLM, sim_llm: LLM, *, admin_url: str, template_db: str,
                  settings: RunSettings | None = None, tags: dict | None = None) -> dict:
-    """Один диалог = одна трасса: корневой спан `dialog` с тегами прогона и вердиктом (по ним в Phoenix фильтруют провалы)."""
+    """One dialogue = one trace: a root `dialog` span with the run tags and the verdict (Phoenix filters failures by them)."""
     st = settings or RunSettings()
     attrs = {"eval.scenario": sc.id, "eval.agent": st.agent, "eval.agent_model": agent_llm.profile.model,
              **{f"eval.{k}": v for k, v in (tags or {}).items()}}

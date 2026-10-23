@@ -34,7 +34,7 @@ def test_all_guarantees_hold_for_any_seed(seed):
 
 def test_sizes():
     snap = build_snapshot(CFG)
-    assert len(snap["patients"]) == 5 + 54 + 450      # P_NEW в БД нет
+    assert len(snap["patients"]) == 5 + 54 + 450      # P_NEW is not in the database
     assert len({p["card_number"] for p in snap["patients"]}) == len(snap["patients"])
 
 
@@ -42,7 +42,7 @@ def test_scenarios_consistent_with_config_and_fixtures():
     scs = load_scenarios()
     assert len(scs) == 15
     cats = {c for s in scs for c in s.categories}
-    assert cats == set(range(1, 13)), f"не закрыты категории ТЗ: {set(range(1, 13)) - cats}"
+    assert cats == set(range(1, 13)), f"SPEC categories not covered: {set(range(1, 13)) - cats}"
     for sc in scs:
         assert validate_scenario(sc, CFG) == [], sc.id
 

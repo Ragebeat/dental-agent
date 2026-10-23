@@ -1,46 +1,46 @@
-# Анкета 問診票 (intake): поля и правила v1
+# Intake form 問診票: fields and rules v1
 
-Источники формы: типовые японские стоматологические анкеты (Минздрав 歯科問診票, анкеты университетских больниц).
-Данные только синтетические.
+Sources for the form: typical Japanese dental intake forms (the MHLW 歯科問診票, university hospital forms).
+Synthetic data only.
 
-## Принцип: анкету ведёт код, не LLM
+## Principle: the form is run by code, not by the LLM
 
-Агент не читает, не задаёт и не пересказывает вопросы анкеты. Его вклад: после записи на 初診 сказать, что анкету можно заполнить по ссылке, и что это необязательно.
-Причины: данные о здоровье не уходят в LLM и трассы; нет расхода токенов; анкета проверяется обычными тестами; один канал инъекций закрыт.
+The agent does not read, ask or retell the form's questions. Its part: after a 初診 booking, say that the form can be filled in through a link and that it is optional.
+Reasons: health data never reaches the LLM or the traces; no tokens are spent; the form is covered by ordinary tests; one injection channel is closed.
 
-## Поток
+## Flow
 
-1. Запись на 初診 (имя, ふりがな, телефон) → карточка и номер карты → запись подтверждена.
-2. Тулза записи возвращает `intake_url`: страница нашего сервиса (FastAPI) с подписанным токеном.
-3. Страница: заполнить сейчас, частично и вернуться позже по той же ссылке, или нажать «заполню в клинике».
-4. Поля сохраняются по мере ввода: обрыв связи или разряженный телефон ничего не теряет.
-5. Токен действует до `expires_at` (14 дней) или пока анкета не завершена; многоразовый, чтобы можно было вернуться.
-6. В LINE (E7) та же страница открывается ссылкой или карточкой Flex Message.
+1. A 初診 booking (name, ふりがな, phone) → a patient record and card number → the booking is confirmed.
+2. The booking tool returns `intake_url`: a page of our own service (FastAPI) with a signed token.
+3. The page: fill it in now, partly and come back later through the same link, or press "I will fill it in at the clinic".
+4. Fields are saved as they are typed: a dropped connection or a dead phone loses nothing.
+5. The token is valid until `expires_at` (14 days) or until the form is completed; it is reusable, so one can come back.
+6. In LINE (E7) the same page opens through a link or a Flex Message card.
 
-## Статус анкеты
+## Form status
 
-`not_started` → `in_progress` → `completed` | `deferred_to_clinic`. Отказ от анкеты записи не отменяет.
+`not_started` → `in_progress` → `completed` | `deferred_to_clinic`. Declining the form does not cancel the booking.
 
-## Поля (всё необязательно, null = не ответил)
+## Fields (all optional, null = not answered)
 
-| Поле | Тип | Комментарий |
+| Field | Type | Comment |
 |---|---|---|
-| `chief_complaint` | текст | основная жалоба / причина визита |
-| `tooth_areas` | список | зоны: верх/низ × право/лево × передние/задние; необязательно номера FDI (международная нумерация зубов) |
-| `onset` | текст | с какого времени |
-| `pain_now` | bool | болит ли сейчас |
-| `last_dental_visit` | текст | примерно когда |
-| `anesthesia_trouble` | текст | проблемы с анестезией или удалением зуба |
-| `bleeding_tendency` | bool | плохо останавливается кровь |
-| `allergy_drug` / `allergy_food` / `allergy_metal` | текст | аллергии |
-| `intolerance` | текст | непереносимость, побочки |
-| `medications` | текст | принимаемые лекарства |
-| `conditions` | список | диабет, давление, сердце, почки/печень, астма, остеопороз, другое |
-| `pregnancy_lactation` | текст | спрашивается нейтрально, без догадок о поле |
+| `chief_complaint` | text | main complaint / reason for the visit |
+| `tooth_areas` | list | areas: upper/lower × right/left × front/back; FDI numbers (the international tooth numbering) optional |
+| `onset` | text | since when |
+| `pain_now` | bool | does it hurt now |
+| `last_dental_visit` | text | roughly when |
+| `anesthesia_trouble` | text | problems with anaesthesia or tooth extraction |
+| `bleeding_tendency` | bool | bleeding is hard to stop |
+| `allergy_drug` / `allergy_food` / `allergy_metal` | text | allergies |
+| `intolerance` | text | intolerances, side effects |
+| `medications` | text | current medication |
+| `conditions` | list | diabetes, blood pressure, heart, kidneys/liver, asthma, osteoporosis, other |
+| `pregnancy_lactation` | text | asked neutrally, with no assumptions about sex |
 | `smoking` | enum | no / yes / former |
 
-## Правила
+## Rules
 
-- Страница не трактует ответы и не даёт советов. Вопрос «что мне принять?» вне анкеты по-прежнему уходит человеку через агента.
-- Свободный текст это данные: хранится как есть, экранируется при показе, никуда не исполняется.
-- Сырой текст анкеты не передаётся ни в какой LLM (включая сводку владельцу): только структурированные поля и числа.
+- The page does not interpret answers and gives no advice. A question like "what should I take?" outside the form still goes to a human through the agent.
+- Free text is data: stored as is, escaped on display, never executed anywhere.
+- Raw form text is passed to no LLM (the owner summary included): only structured fields and numbers.

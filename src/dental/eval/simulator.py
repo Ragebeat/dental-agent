@@ -1,4 +1,7 @@
-"""Симулятор пациента: LLM играет пациента по persona_ja сценария. Инструментов и правил агента не знает."""
+"""Patient simulator: an LLM plays the patient from the scenario's persona_ja. It knows nothing of the agent's tools or rules.
+
+The role prompt below stays in Russian on purpose: it is the input of every logged run, and changing
+its wording would change the simulator's behaviour and make new runs incomparable with the old ones."""
 
 from __future__ import annotations
 
@@ -36,7 +39,7 @@ SYSTEM = """\
 
 
 def build_system(sc: Scenario, now: datetime) -> str:
-    """Всё, что видит симулятор о своей роли. Ручной режим выдаёт человеку/Claude ровно этот текст и ничего больше."""
+    """Everything the simulator sees about its role. Manual mode gives the human/Claude exactly this text and nothing more."""
     styles = [sc.style] if isinstance(sc.style, str) else sc.style
     scripted = ""
     if sc.scripted_lines_ja:
@@ -56,7 +59,7 @@ class Simulator:
     def _next(self, incoming: str) -> tuple[str, bool]:
         self.messages.append({"role": "user", "content": incoming})
         raw = ""
-        for _ in range(3):                  # модель-симулятор иногда отдаёт пустой ответ — это не реплика пациента, переспрашиваем
+        for _ in range(3):                  # the simulator model sometimes returns an empty answer — not a patient message, ask again
             r = self.llm.chat(self.messages)
             self.usage.add(r)
             raw = (r.text or "").strip()

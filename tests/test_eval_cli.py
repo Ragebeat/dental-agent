@@ -1,4 +1,4 @@
-"""Адаптер HTTP (на подложке транспорта), отпечаток конфигурации, CLI run + compare на поддельных LLM."""
+"""The HTTP adapter (on a mock transport), the configuration fingerprint, CLI run + compare on fake LLMs."""
 
 import json
 
@@ -104,6 +104,6 @@ def test_cli_run_journal_and_compare(tmp_path, monkeypatch, capsys, admin_url):
     capsys.readouterr()
     compare.main([])
     out = capsys.readouterr().out
-    assert "отличия конфигурации" in out and "agent" in out and "outcome_rate" in out
+    assert "configuration differences" in out and "agent" in out and "outcome_rate" in out
     compare.main(["--list"])
     assert "fake-a" in capsys.readouterr().out

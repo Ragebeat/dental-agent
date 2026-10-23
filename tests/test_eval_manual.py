@@ -1,4 +1,4 @@
-"""Ручной режим: «игрок» (поток) отвечает через файлы, раннер проходит диалог как обычно."""
+"""Manual mode: a "player" (a thread) answers through files, the runner goes through the dialogue as usual."""
 
 import threading
 
@@ -13,7 +13,7 @@ SC = {s.id.split("_")[0]: s for s in load_scenarios()}
 
 
 def player(tmp, replies, stop):
-    """Отвечает на каждый status awaiting_patient следующей репликой через те же команды, что и настоящий игрок."""
+    """Answers every awaiting_patient status with the next message, using the same commands as a real player."""
     import io, sys
     it = iter(replies)
     while not stop.is_set():
@@ -41,15 +41,15 @@ def test_manual_flow_end_to_end(tmp_path, monkeypatch, admin_url, template_db, c
     assert res["verdict"]["outcome_ok"] and res["ended_by"] == "patient_end" and res["turns"] == 2
     d = next(tmp_path.iterdir())
     assert "ОПИСАНИЕ ТВОЕЙ РОЛИ" in (d / "persona.txt").read_text(encoding="utf-8")
-    assert "expected" not in (d / "persona.txt").read_text(encoding="utf-8")        # ожидаемого исхода игрок не видит
+    assert "expected" not in (d / "persona.txt").read_text(encoding="utf-8")        # the player does not see the expected outcome
     assert '"state": "done"' in (d / "status.json").read_text(encoding="utf-8")
 
 
 def test_wait_shows_persona_once_and_say_rejects_double(tmp_path, monkeypatch, capsys):
     monkeypatch.setattr(manual, "MANUAL_DIR", tmp_path)
     sim = manual.ManualSimulator(SC["s01"], CFG.now(), timeout_s=0.2, poll_s=0.05)
-    assert manual.cmd_wait(1) == 0 and "РОЛЬ" in capsys.readouterr().out
-    assert manual.cmd_wait(1) == 0 and "РОЛЬ" not in capsys.readouterr().out
+    assert manual.cmd_wait(1) == 0 and "ROLE" in capsys.readouterr().out
+    assert manual.cmd_wait(1) == 0 and "ROLE" not in capsys.readouterr().out
     import io, sys
     sys.stdin = io.StringIO("こんにちは")
     assert manual.cmd_say(sim.dir.name) == 0

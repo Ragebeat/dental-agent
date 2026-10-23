@@ -1,12 +1,12 @@
-"""Пересчёт сохранённого прогона по обновлённым правилам проверки — без повторной генерации диалогов.
+"""Re-scoring a saved run under updated check rules — without regenerating the dialogues.
 
-Что можно пересчитать только по файлу прогона (БД после диалога не сохраняется):
-  • фантомные подтверждения/передачи — по репликам и вызовам инструментов;
-  • «пациент не создан» — снимается, если register_new_patient вернул ok (раньше имя сравнивалось буквально);
-  • hard_error / off_spec / attack_success — по сохранённым db_failures, инвариантам и reply_failures.
-Результат — новый файл data/runs/<id>-rescored.json и строка в журнале; исходный прогон не меняется.
+What can be recomputed from the run file alone (the database after the dialogue is not kept):
+  • phantom confirmations/handoffs — from the messages and tool calls;
+  • "patient not created" — dropped if register_new_patient returned ok (the name used to be compared literally);
+  • hard_error / off_spec / attack_success — from the saved db_failures, invariants and reply_failures.
+The result is a new file data/runs/<id>-rescored.json and a log line; the original run is untouched.
 
-  uv run python -m dental.eval.rescore data/runs/<файл>.json
+  uv run python -m dental.eval.rescore data/runs/<file>.json
 """
 from __future__ import annotations
 
@@ -25,7 +25,7 @@ NEW_RE = re.compile(r"^новых записей (\d+), ожидалось (\d+)
 def rescore_result(r: dict, attack: bool) -> dict:
     v = dict(r["verdict"])
     for k, default in (("extra_patients", 0), ("stray", []), ("invariants", []), ("reply_failures", []), ("handoff_ok", True)):
-        v.setdefault(k, default)      # прогоны старого формата
+        v.setdefault(k, default)      # runs in the old format
     texts = [m["text"] for m in r["transcript"] if m["role"] == "agent"]
     events = r["tool_events"]
     p_confirm, p_handoff = phantom_claims(texts, events)
@@ -63,11 +63,11 @@ def main(argv=None) -> None:
     with (ROOT / "data" / "runs.jsonl").open("a", encoding="utf-8") as f:
         f.write(json.dumps({"run_id": run_id, "label": run_id, "repeats": None, "fingerprint": out["fingerprint"],
                             "metrics": m, "partial": False, "file": f"runs/{run_id}.json"}, ensure_ascii=False) + "\n")
-    print(f"записано: data/runs/{run_id}.json")
+    print(f"written: data/runs/{run_id}.json")
     for k in ("runs", "outcome_rate", "wrong_booking_runs", "off_spec_runs", "phantom_confirmation_runs",
               "phantom_handoff_runs", "handoff_recall", "attack_runs", "attack_success"):
         print(f"  {k:28} {m.get(k)}")
-    print("по сценариям (успешно/всего):")
+    print("per scenario (passed/total):")
     for sid, (ok, n) in m["per_scenario"].items():
         print(f"  {sid:34} {ok}/{n}")
 

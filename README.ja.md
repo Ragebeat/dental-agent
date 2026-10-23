@@ -116,7 +116,7 @@
 
 ## 何が壊れたか、なぜか
 
-要約です。詳しい経緯は [`docs/DECISIONS.md`](docs/DECISIONS.md)（ロシア語）にあります。
+要約です。詳しい経緯は [`docs/DECISIONS.md`](docs/DECISIONS.md) にあります。
 
 **エージェント側**
 
@@ -165,7 +165,7 @@
 1 つの対話が 1 つのトレースです: `dialog` → `turn` → グラフのノード `node.*` → `tool.*` と `llm.chat`（モデル、トークン、遅延、`finish_reason`）。ルートスパンの評価タグ（`eval.scenario`、`eval.outcome_ok`、`eval.wrong_booking`、`eval.agent_tokens` など）により、UI で失敗を絞り込めます。
 
 - **既定ではオフ**（`TRACE=1` または `eval.run --trace`）。オフの間はトレーサーが空で、マシンの外には何も出ません。
-- **内容は既定で非表示。** 患者のメッセージ、プロンプト、ツールの引数は `[скрыто: N симв.]`（ロシア語で「非表示: N 文字」の意味。長さだけが残る） に置き換えられます。`TRACE_CONTENT=1` ではテキストを表示しますが、先にスクラバーが電話番号、生年月日、6 桁の診察券番号をマスクします。氏名は正規表現では確実にマスクできないため、全内容の表示は合成データ専用です。マスクは 1 つの関数にあり、新しい書き込み箇所から迂回することはできません。
+- **内容は既定で非表示。** 患者のメッセージ、プロンプト、ツールの引数は `[hidden: N chars]`（長さだけが残る） に置き換えられます。`TRACE_CONTENT=1` ではテキストを表示しますが、先にスクラバーが電話番号、生年月日、6 桁の診察券番号をマスクします。氏名は正規表現では確実にマスクできないため、全内容の表示は合成データ専用です。マスクは 1 つの関数にあり、新しい書き込み箇所から迂回することはできません。
 - テストで、診察券番号、生年月日、氏名、メッセージ本文がスパンの属性に入らないことを確認しています。
 - オーナー向けサマリーは意図的にトレースしません。患者との会話ではなく、集計に対するバッチ処理だからです。
 
@@ -278,7 +278,7 @@ docs/            SPEC、DECISIONS、FIXTURES、INTAKE、SCENARIO_FORMAT
 tests/
 ```
 
-ドキュメント: [`docs/SPEC.md`](docs/SPEC.md)（当初の仕様）、[`docs/DECISIONS.md`](docs/DECISIONS.md)（測定値つきの番号付き決定 41 件。SPEC と食い違う場合は DECISIONS が優先）、[`docs/SCENARIO_FORMAT.md`](docs/SCENARIO_FORMAT.md)、[`docs/FIXTURES.md`](docs/FIXTURES.md)、[`docs/INTAKE.md`](docs/INTAKE.md)。仕様書と決定記録はロシア語で書かれています。
+ドキュメント: [`docs/SPEC.md`](docs/SPEC.md)（当初の仕様）、[`docs/DECISIONS.md`](docs/DECISIONS.md)（測定値つきの番号付き決定 42 件。SPEC と食い違う場合は DECISIONS が優先）、[`docs/SCENARIO_FORMAT.md`](docs/SCENARIO_FORMAT.md)、[`docs/FIXTURES.md`](docs/FIXTURES.md)、[`docs/INTAKE.md`](docs/INTAKE.md)。ドキュメントはすべて英語です。コードの一部の文字列は意図的にロシア語のまま残しています。モデルが読むプロンプトやツールのテキスト、そして過去の実行を再計算するための実行レポートの形式です（DECISIONS #42）。
 
 ---
 

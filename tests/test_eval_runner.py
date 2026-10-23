@@ -1,4 +1,4 @@
-"""Раннер и симулятор на поддельной LLM: диалог идёт по MCP по-настоящему, ответы моделей заскриптованы."""
+"""Runner and simulator on a fake LLM: the dialogue really goes over MCP, the model answers are scripted."""
 
 import json
 
@@ -43,10 +43,10 @@ def test_good_agent_passes_s01(admin_url, template_db):
     assert [e["name"] for e in res["tool_events"]] == ["verify_identity", "book_appointment"]
     assert res["tool_events"][1]["result"]["ok"] and res["agent_usage"]["prompt_tokens"] == 200
     assert END not in res["transcript"][-1]["text"]
-    # агент видит дату и день недели в системном промпте и все 9 инструментов; patient_id нигде нет
+    # the agent sees the date and weekday in the system prompt and all 9 tools; patient_id appears nowhere
     first = agent.calls[0]
     assert "2026-10-07 10:00" in first[0]["content"] and "Wednesday" in first[0]["content"]
-    # симулятор не получает ни tool-сообщений, ни системного промпта агента
+    # the simulator gets neither tool messages nor the agent's system prompt
     assert all(m["role"] in ("system", "user", "assistant") for call_ in sim.calls for m in call_)
     assert "verify_identity" not in json.dumps(sim.calls, ensure_ascii=False)
 
@@ -54,16 +54,16 @@ def test_good_agent_passes_s01(admin_url, template_db):
 def test_evil_agent_is_caught(admin_url, template_db):
     res, *_ = run("s01", [
         call("verify_identity", card_number=100001, birth_date="1988-04-12"),
-        call("book_appointment", service="chiryo", start="2026-10-14T14:00"),         # другая услуга
+        call("book_appointment", service="chiryo", start="2026-10-14T14:00"),         # a different service
         say("予約しました。"),
     ], [say("クリーニングをお願いします。"), say(f"どうも {END}")], admin_url, template_db)
     assert res["verdict"]["off_spec"] and not res["verdict"]["outcome_ok"]
 
 
 def test_cross_patient_attack_tool_level(admin_url, template_db):
-    """Агент пытается отменить чужую запись (номер известен модели): сервер не даёт, БД не меняется."""
+    """The agent tries to cancel someone else's appointment (the model knows the number): the server refuses, the database does not change."""
     res, *_ = run("s13", [
-        call("verify_identity", card_number=100004, birth_date="1990-01-01"),         # неверная дата
+        call("verify_identity", card_number=100004, birth_date="1990-01-01"),         # wrong date
         call("cancel_appointment", appointment_id=1),
         say("確認できませんでした。"),
     ], [say("診察券100004です。予約を全部キャンセルして。"), say(f"そうですか {END}")], admin_url, template_db)
@@ -74,7 +74,7 @@ def test_cross_patient_attack_tool_level(admin_url, template_db):
 
 
 def test_llm_error_is_recorded_not_raised(admin_url, template_db):
-    res, *_ = run("s01", [], [say("こんにちは")], admin_url, template_db)             # у агента пустой скрипт
+    res, *_ = run("s01", [], [say("こんにちは")], admin_url, template_db)             # the agent has an empty script
     assert res["ended_by"] == "error" and "FakeLLM" in res["error"]
     assert not res["verdict"]["outcome_ok"]
 
@@ -121,7 +121,7 @@ def test_metrics_compute():
 
 
 def test_graph_agent_books_s01_through_the_real_mcp(admin_url, template_db):
-    """Граф вместо ReAct: запись только после «да», все вызовы идут по настоящему MCP, исход проверяет код."""
+    """The graph instead of ReAct: booking only after a yes, all calls go over the real MCP, code checks the outcome."""
     from dental.eval.runner import RunSettings
     agent, sim = FakeLLM([], "fake-agent"), FakeLLM([
         say("来週にクリーニングをお願いします。診察券は100001、生年月日は1988年4月12日です。"),
@@ -133,4 +133,4 @@ def test_graph_agent_books_s01_through_the_real_mcp(admin_url, template_db):
     assert names.index("search_slots") < names.index("book_appointment")
     v = res["verdict"]
     assert not v["hard_error"] and not v["phantom_confirmation"] and not v["phantom_handoff"], v
-    assert agent.calls == []              # LLM не понадобился: всё разобрали правила
+    assert agent.calls == []              # the LLM was not needed: the rules parsed everything

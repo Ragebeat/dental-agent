@@ -1,13 +1,13 @@
-"""Агент на LangGraph (E4): детерминированный граф вместо свободного цикла ReAct.
+"""LangGraph agent (E4): a deterministic graph instead of a free ReAct loop.
 
-LLM делает только узкую работу: разбирает то, что не поймали правила (имя/ふりがな при регистрации, формулировка даты,
-класс запроса). Всё остальное — код: даты (agent/dates.py), поиск и выбор слотов, вызовы записи/переноса/отмены,
-тексты ответов (шаблоны из данных ответа инструмента). Поэтому фраза «ご予約が確定しました» не может появиться без
-успешного вызова, а «передаю сотруднику» — без handoff_to_staff.
+The LLM does only narrow work: it parses what the rules missed (name/ふりがな at registration, a date wording,
+the request class). Everything else is code: dates (agent/dates.py), slot search and selection, booking/rescheduling/cancelling calls,
+reply texts (templates filled from the tool result). So «ご予約が確定しました» cannot appear without
+a successful call, and "passing you to staff" cannot appear without handoff_to_staff.
 
-Человек в контуре (ТЗ 4.3): подтверждение «да/нет» перед записью, переносом и отменой; передача сотруднику при
-неоднозначности после 2 уточнений, медицинском вопросе, жалобе, отмене менее чем за N часов, 3 ошибках инструментов
-подряд, подозрении на манипуляцию.
+Human in the loop (SPEC 4.3): a yes/no confirmation before booking, rescheduling and cancelling; a handoff to staff on
+ambiguity after 2 clarifications, a medical question, a complaint, a cancellation less than N hours ahead, 3 tool errors
+in a row, suspected manipulation.
 """
 from __future__ import annotations
 
@@ -31,7 +31,7 @@ from dental.agent.understand import (NEW_PATIENT, has_date_info, merge_intent, n
 GRAPH_VERSION = "graph-v7"
 WD = "月火水木金土日"
 REG_LABEL = {"name": "お名前（漢字）", "name_kana": "ふりがな", "phone": "お電話番号", "birth_date": "生年月日（西暦）"}
-MAX_ASKS = 2                       # после двух уточнений по одному и тому же — передача человеку
+MAX_ASKS = 2                       # after two clarifications about the same thing — handoff to a human
 THANKS = re.compile(r"ありがとう|了解|承知|助かり|失礼|よろしくお願いいたします")
 FALLBACK = "申し訳ございません、うまく処理できませんでした。担当スタッフから改めてご連絡いたします。"
 
@@ -69,7 +69,7 @@ ID_RE = [re.compile(p) for p in (
 
 
 def strip_ids(text: str) -> str:
-    """Убирает номер карты, дату рождения, телефон — чтобы они не попали в разбор даты записи."""
+    """Removes the card number, birth date and phone, so they do not leak into parsing the appointment date."""
     t = norm(text)
     for r in ID_RE:
         t = r.sub(" ", t)
@@ -90,17 +90,17 @@ class S(TypedDict, total=False):
     reply: str | None
     introduced: bool
     notes: list[str]
-    # личность
+    # identity
     verified: bool
     patient_name: str
     card: int | None
     birth: str | None
     reg: dict
-    reg_need: int                # сколько полей регистрации не хватало на прошлом вопросе (рост заполненности сбрасывает счётчик уточнений)
+    reg_need: int                # how many registration fields were missing at the last question (progress resets the clarification counter)
     wants_new: bool
-    is_new: bool                 # зарегистрирован в этом диалоге → доступна только 初診
+    is_new: bool                 # registered in this dialogue → only 初診 is available
     id_fails: int
-    # запрос
+    # request
     action: str | None
     service: str | None
     intent: dict
@@ -113,7 +113,7 @@ class S(TypedDict, total=False):
     choice_idx: int | None
     asks: dict
     done: bool
-    # передача
+    # handoff
     handoff_reason: str | None
     handed_off: bool
     pending_manip: bool
@@ -134,7 +134,7 @@ class GraphAgent:
         self.app = self._build()
         self.cfg = {"configurable": {"thread_id": "dialog"}, "recursion_limit": 40}
 
-    # ---------- инструменты и LLM ----------
+    # ---------- tools and LLM ----------
     async def _tool(self, name: str, args: dict) -> dict:
         with tracing.span(f"tool.{name}", "TOOL", attrs={"tool.name": name, "tool.args": args}) as sp:
             try:
@@ -149,12 +149,12 @@ class GraphAgent:
                     res = {"value": res}
             except json.JSONDecodeError:
                 res = {"ok": False, "error": "tool_error" if is_err else "non_json", "message": text[:500]}
-            tracing.set_attrs(sp, {"tool.ok": bool(res.get("ok")), "tool.error": res.get("error")})     # код ошибки — метаданные
+            tracing.set_attrs(sp, {"tool.ok": bool(res.get("ok")), "tool.error": res.get("error")})     # the error code is metadata
         self.events.append({"turn": self.turn, "name": name, "args": args, "result": res})
         if res.get("ok"):
             self.tool_error_streak = 0
         elif res.get("error") not in ("patient_not_verified", "too_late_to_cancel", "already_registered", "slot_taken"):
-            self.tool_error_streak += 1          # «ожидаемые» отказы бизнес-правил не считаем сбоем инструментов
+            self.tool_error_streak += 1          # "expected" business-rule refusals do not count as tool failures
         return res
 
     def _llm_json(self, system: str, text: str) -> dict:
@@ -176,10 +176,10 @@ class GraphAgent:
             self._cancel_hours = res.get("cancel_free_until_hours_before", 24) or 24
         return self._services
 
-    # ---------- вспомогательное ----------
+    # ---------- helpers ----------
     @staticmethod
     def _out(s: S, text: str, **u) -> dict:
-        """Ответ + накопленные заметки; на первой реплике — представление ИИ."""
+        """Reply plus accumulated notes; on the first message, the AI introduces itself."""
         parts = list(s.get("notes") or []) + [text]
         if not s.get("introduced"):
             parts.insert(0, SAY["intro"])
@@ -187,7 +187,7 @@ class GraphAgent:
 
     @staticmethod
     def _ask(s: S, key: str) -> tuple[dict, bool]:
-        """Счётчик уточнений; True — лимит исчерпан, пора передавать человеку."""
+        """Clarification counter; True means the limit is reached and it is time to hand off to a human."""
         asks = dict(s.get("asks") or {})
         asks[key] = asks.get(key, 0) + 1
         return asks, asks[key] > MAX_ASKS
@@ -198,7 +198,7 @@ class GraphAgent:
     def _svc(self, code: str) -> dict:
         return next((x for x in (self._services or []) if x["code"] == code), {"code": code, "label_ja": code, "minutes": None})
 
-    # ---------- граф ----------
+    # ---------- graph ----------
     def _build(self):
         g = StateGraph(S)
         nodes = {"ingest": self.n_ingest, "handoff": self.n_handoff, "closing": self.n_closing, "flag_manip": self.n_flag_manip,
@@ -214,7 +214,7 @@ class GraphAgent:
         return g.compile(checkpointer=MemorySaver())
 
     def _traced(self, name: str, fn):
-        """Узел графа как спан: в трассу идут только метаданные — какие ключи состояния изменились, причина передачи, длина ответа."""
+        """A graph node as a span: only metadata goes into the trace — which state keys changed, the handoff reason, the reply length."""
         async def run(s: S) -> dict:
             with tracing.span(f"node.{name}", "CHAIN", attrs={"graph.node": name, "graph.turn": self.turn}) as sp:
                 out = await fn(s)
@@ -239,7 +239,7 @@ class GraphAgent:
         if s.get("await_confirm"):
             return "confirm"
         if s.get("done"):
-            return "ask_action"                  # запрос выполнен, нового нет («10日に行きます» — не повод искать слоты)
+            return "ask_action"                  # request done, nothing new («10日に行きます» is no reason to search for slots)
         act = s.get("action")
         if not act:
             return "ask_action"
@@ -269,7 +269,7 @@ class GraphAgent:
             tracing.set_attrs(sp, {"output.value": text, "graph.reply_chars": len(text)})
             return text
 
-    # ---------- узлы ----------
+    # ---------- nodes ----------
     async def n_ingest(self, s: S) -> dict:
         text = s["text"]
         u: dict[str, Any] = {"reply": None, "yn": None, "choice_idx": None}
@@ -298,7 +298,7 @@ class GraphAgent:
                 reg["birth_date"] = b
             if (s.get("wants_new") or u.get("wants_new")) and not (reg.get("name") and reg.get("name_kana")):
                 for k, v in parse_reg_part(text, [k for k in ("name", "name_kana") if not reg.get(k)]).items():
-                    reg.setdefault(k, v)                        # пошаговая регистрация: имя и чтение приходят отдельными репликами
+                    reg.setdefault(k, v)                        # step-by-step registration: name and reading arrive in separate messages
             u["reg"] = reg
             if (s.get("wants_new") or u.get("wants_new")) and not (reg.get("name") and reg.get("name_kana")) and len(text) > 6 \
                     and (reg.get("phone") or reg.get("birth_date")):
@@ -314,9 +314,9 @@ class GraphAgent:
             u["yn"] = parse_yesno(text)
             nd = parse_ja(ids)
             if u["yn"] is None and (has_date_info(nd) or nd.time or nd.time_after or nd.time_before):
-                u["yn"] = False         # «金曜にして» без слова «нет» — тоже отказ от текущего варианта
+                u["yn"] = False         # «金曜にして» without the word "no" is also a rejection of the current option
         elif (a := parse_action(text)) and not (s.get("done") and THANKS.search(text)):
-            # «お願いしたい» в ответе на выбор слота — не смена действия: слабый «book» не перебивает reschedule/cancel
+            # «お願いしたい» in reply to a slot choice is not a change of action: a weak "book" does not override reschedule/cancel
             if a != s.get("action") and not (a == "book" and s.get("action")):
                 u.update(action=a, appt=None, appts=[], options=[], chosen=None)
             if not s.get("action"):
@@ -325,13 +325,13 @@ class GraphAgent:
             if (sv := parse_service(text, services)) and not s.get("is_new"):
                 u["service"] = sv
                 if not (u.get("action") or s.get("action")):
-                    u["action"] = "book"            # «クリーニングをお願いします» — глагола нет, но это запись
+                    u["action"] = "book"            # «クリーニングをお願いします» — no verb, but it is a booking
         old = self._intent(s)
         new = parse_ja(ids)
         opts = s.get("options") or []
         idx = None
         if opts and not s.get("chosen") and not s.get("await_confirm"):
-            idx = parse_choice(ids, opts)                     # выбор из показанных вариантов важнее «новой даты» в той же фразе
+            idx = parse_choice(ids, opts)                     # a choice among the shown options outranks a "new date" in the same sentence
             if idx is None and re.search(r"どれでも|任せ|何でも|どちらでも|いつでも", ids):
                 idx = 0
         u["choice_idx"] = idx
@@ -340,7 +340,7 @@ class GraphAgent:
             if changed or new.asap:
                 merged = merge_intent(old, new)
                 if changed:
-                    u.update(options=[], chosen=None)             # условия поменялись — старые варианты недействительны
+                    u.update(options=[], chosen=None)             # the conditions changed — the old options are void
                 u["intent"] = merged.model_dump()
         return u
 
@@ -377,14 +377,14 @@ class GraphAgent:
             need = [k for k in ("name", "name_kana", "phone", "birth_date") if not reg.get(k)]
             if need:
                 prev = s.get("reg_need")
-                if prev is not None and len(need) < prev:           # пациент продвинулся: это не повтор вопроса, счётчик не растёт
+                if prev is not None and len(need) < prev:           # the patient made progress: not a repeated question, the counter does not grow
                     s = {**s, "asks": {**(s.get("asks") or {}), "reg": 0}}
                 asks, over = self._ask(s, "reg")
                 if over:
                     return {"asks": asks, "handoff_reason": "ambiguity"}
                 if len(need) == 4:
                     say = SAY["ask_reg"]
-                else:                                                # спрашиваем только недостающее
+                else:                                                # ask only for what is missing
                     say = SAY["ask_reg_more"].format(fields="、".join(REG_LABEL[k] for k in need))
                 return self._out(s, say, asks=asks, reg_need=len(need))
             res = await self._tool("register_new_patient", {"name": reg["name"], "name_kana": reg["name_kana"],
@@ -492,7 +492,7 @@ class GraphAgent:
             tm = lambda t: int(t[:2]) * 60 + int(t[3:])      # noqa: E731
             want = tm(it.time)
             slots = sorted(slots, key=lambda x: (abs(tm(x[1]) - want), x[0]))
-            if widened:                                      # точного времени нет: сначала ближайшее время в тот же день
+            if widened:                                      # no exact time: first the nearest time on the same day
                 res = await self._tool("search_slots", {"service": code, "date_from": w.date_from.isoformat(),
                                                         "date_to": w.date_to.isoformat()})
                 same = [(d["date"], t) for d in res.get("days", []) for t in d["times"]] if res.get("ok") else []
@@ -511,7 +511,7 @@ class GraphAgent:
 
     @staticmethod
     def _spread(slots: list[tuple[str, str]], n: int) -> list[tuple[str, str]]:
-        """Разные дни по кругу: первый слот каждого дня, затем следующие — чтобы варианты не сидели в одном дне."""
+        """Different days round-robin: the first slot of each day, then the next ones — so the options are not all on one day."""
         by_day: dict[str, list[tuple[str, str]]] = {}
         for sl in slots:
             by_day.setdefault(sl[0], []).append(sl)
@@ -566,7 +566,7 @@ class GraphAgent:
             if s.get("action") == "cancel":
                 return self._out(s, "承知いたしました。キャンセルは行いません。", action=None, appt=None, done=True, **keep)
             if it_changed:
-                return keep                                        # новая дата уже в состоянии → ищем заново
+                return keep                                        # a new date is already in the state → search again
             return self._out(s, SAY["reset"], intent={}, **keep)
         kind = pend["kind"]
         if kind == "book":

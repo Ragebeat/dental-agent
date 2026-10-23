@@ -1,26 +1,26 @@
-"""Канал LINE (Messaging API, вебхук): тот же агент, другой вход. Код агента и MCP-сервера не меняется.
+"""LINE channel (Messaging API, webhook): the same agent, a different entry point. The agent and MCP server code do not change.
 
-Путь события: LINE → POST /line/webhook → проверка подписи X-Line-Signature (HMAC-SHA256 от тела по Channel Secret; без
-верной подписи тело даже не разбирается) → событие уходит в фон, вебхук сразу отвечает 200 → сессия пользователя →
-GraphAgent.reply → ответ через Reply API (токен ответа живёт недолго; при отказе — Push API).
+An event's path: LINE → POST /line/webhook → X-Line-Signature check (HMAC-SHA256 of the body with the Channel Secret; without
+a valid signature the body is not even parsed) → the event goes to the background, the webhook answers 200 at once → the user's session →
+GraphAgent.reply → the answer via the Reply API (the reply token is short-lived; on refusal, the Push API).
 
-Сессия = один LINE-пользователь = один GraphAgent и один MCP-клиент со своим состоянием, как «один разговор» в веб-чате.
-Каждая сессия — отдельная задача-актор с очередью: сообщения одного пользователя обрабатываются строго по порядку и
-никогда параллельно, чужие сессии друг друга не задевают. Контекст MCP-клиента открывается и закрывается в одной задаче
-(иначе anyio ругается на выход из области отмены в другой задаче).
+Session = one LINE user = one GraphAgent and one MCP client with its own state, like "one conversation" in the web chat.
+Each session is a separate actor task with a queue: one user's messages are handled strictly in order and
+never in parallel; sessions do not affect each other. The MCP client context is opened and closed in the same task
+(otherwise anyio complains about leaving a cancel scope in a different task).
 
-Безопасность и ресурсы (SPEC, раздел 7):
-- Идентификатор пользователя LINE в базу и в журналы не попадает: ключ сессии = sha256(соль + userId)[:16]; он же client_key
-  для блокировки перебора карт. Соль задаётся LINE_USER_SALT.
-- Ограничение частоты (сообщений в минуту на пользователя), лимит ходов в сессии, лимит длины входящего текста, простой
-  сессии закрывает её (TTL), общий потолок числа сессий; ночью/после смены даты сессия пересоздаётся (агент считает
-  «завтра» от даты создания).
-- Отвечаем только в личных чатах (source.type == "user"): в группах агент молчит, персональные данные туда не попадают.
-- Повторная доставка (webhookEventId уже видели) игнорируется: иначе запись создалась бы дважды.
-- Содержимое сообщений не логируется.
+Security and resources (SPEC, section 7):
+- The LINE user ID never reaches the database or the logs: session key = sha256(salt + userId)[:16]; it is also the client_key
+  for blocking card enumeration. The salt is set by LINE_USER_SALT.
+- Rate limiting (messages per minute per user), a turn limit per session, an incoming text length limit; an idle
+  session is closed (TTL); a global cap on the number of sessions; at night / on a date change the session is recreated (the agent counts
+  "tomorrow" from its creation date).
+- Replies only in one-to-one chats (source.type == "user"): in groups the agent stays silent, so personal data never goes there.
+- A redelivery (webhookEventId already seen) is ignored: otherwise an appointment would be created twice.
+- Message content is not logged.
 
-Известное ограничение: запасной вызов LLM в графе синхронный и блокирует цикл событий на время запроса (правила идут первыми,
-LLM нужен редко). Для нагрузки — вынести вызов в поток; для демо и eval этого достаточно.
+Known limitation: the graph's fallback LLM call is synchronous and blocks the event loop for the duration of the request (rules go first,
+the LLM is rarely needed). Under load, move the call to a thread; for the demo and eval this is enough.
 """
 
 from __future__ import annotations
@@ -48,8 +48,8 @@ from starlette.routing import Route
 log = logging.getLogger("dental.line")
 
 LINE_API = "https://api.line.me/v2/bot/message"
-MAX_LINE_TEXT = 5000          # предел одного текстового сообщения LINE
-MAX_REPLY_MESSAGES = 5        # за один Reply/Push
+MAX_LINE_TEXT = 5000          # limit of one LINE text message
+MAX_REPLY_MESSAGES = 5        # per Reply/Push
 MAX_BODY = 1_000_000
 
 GREETING = "友だち追加ありがとうございます。AIの予約アシスタントです。ご予約・変更・キャンセルのご希望をメッセージでお送りください。"
@@ -60,7 +60,7 @@ TURN_LIMIT = "やり取りが長くなりましたので、いったん終了い
 APOLOGY = "申し訳ありません。ただいま処理できませんでした。しばらくしてからもう一度お試しください。"
 
 
-# ---------- подпись ----------
+# ---------- signature ----------
 def sign(secret: str, body: bytes) -> str:
     return base64.b64encode(hmac.new(secret.encode(), body, hashlib.sha256).digest()).decode()
 
@@ -71,7 +71,7 @@ def verify_signature(secret: str, body: bytes, header: str | None) -> bool:
     return hmac.compare_digest(sign(secret, body).encode(), header.encode())
 
 
-# ---------- отправка ----------
+# ---------- sending ----------
 class Sender(Protocol):
     async def reply(self, token: str, texts: list[str]) -> None: ...
     async def push(self, user_id: str, texts: list[str]) -> None: ...
@@ -86,7 +86,7 @@ def split_text(text: str, limit: int = MAX_LINE_TEXT, max_parts: int = MAX_REPLY
 
 
 class LineApi:
-    """Настоящий Messaging API. Нужны LINE_CHANNEL_ACCESS_TOKEN и сетевой доступ к api.line.me."""
+    """The real Messaging API. Needs LINE_CHANNEL_ACCESS_TOKEN and network access to api.line.me."""
 
     def __init__(self, token: str, client: httpx.AsyncClient | None = None) -> None:
         self.client = client or httpx.AsyncClient(timeout=10)
@@ -105,8 +105,8 @@ class LineApi:
 
 @dataclass
 class RecordingSender:
-    """Заглушка Reply/Push API: для тестов, эмулятора и eval-прогона через канал."""
-    sent: list[tuple[str, str, list[str]]] = field(default_factory=list)      # (reply|push, токен или пользователь, тексты)
+    """Reply/Push API stub: for tests, the emulator and eval runs through the channel."""
+    sent: list[tuple[str, str, list[str]]] = field(default_factory=list)      # (reply|push, token or user, texts)
     fail_reply: bool = False
 
     async def reply(self, token: str, texts: list[str]) -> None:
@@ -121,14 +121,14 @@ class RecordingSender:
         return ["\n".join(t) for _, _, t in self.sent]
 
 
-# ---------- сессии ----------
+# ---------- sessions ----------
 class SessionFactory(Protocol):
-    def open(self, user_key: str, now: datetime) -> contextlib.AbstractAsyncContextManager:   # -> агент с .reply()
+    def open(self, user_key: str, now: datetime) -> contextlib.AbstractAsyncContextManager:   # -> an agent with .reply()
         ...
 
 
 class McpSessions:
-    """Боевая фабрика: своя MCP-сессия (channel="line", client_key = ключ пользователя) и свой GraphAgent."""
+    """Production factory: its own MCP session (channel="line", client_key = the user's key) and its own GraphAgent."""
 
     def __init__(self, core, llm, now_fn: Callable[[], datetime], *, max_rounds: int = 8, token_cap: int = 150_000) -> None:
         self.core, self.llm, self.now_fn, self.max_rounds, self.token_cap = core, llm, now_fn, max_rounds, token_cap
@@ -147,7 +147,7 @@ class McpSessions:
 
 
 class _Closed(Exception):
-    """Сессия закрылась (простой, смена даты, лимит) — сообщение нужно отдать новой."""
+    """The session closed (idle, date change, limit): the message must go to a new one."""
 
 
 class _TurnLimit(Exception):
@@ -165,7 +165,7 @@ class _Session:
         self.task = asyncio.create_task(self._run())
 
     def _retire(self) -> None:
-        """Сессия больше не принимает сообщения (сразу, синхронно: закрытие MCP-клиента ждёт, а новые сообщения — нет)."""
+        """The session stops accepting messages (immediately, synchronously: closing the MCP client waits, new messages do not)."""
         self.closed = True
         if self.gw._sessions.get(self.key) is self:
             del self.gw._sessions[self.key]
@@ -219,7 +219,7 @@ class _Session:
         self.queue.put_nowait(None)
 
 
-# ---------- шлюз ----------
+# ---------- gateway ----------
 class Gateway:
     def __init__(self, factory: SessionFactory, sender: Sender, *, now_fn: Callable[[], datetime], salt: str = "dental-agent",
                  ttl_s: float = 1800, max_sessions: int = 500, max_turns: int = 40, rate_per_min: int = 15,
@@ -233,12 +233,12 @@ class Gateway:
         self._warned: set[str] = set()
         self.last_error: Exception | None = None
 
-    # -- публичное
+    # -- public
     def user_key(self, user_id: str) -> str:
         return hashlib.sha256(f"{self.salt}:{user_id}".encode()).hexdigest()[:16]
 
     def submit(self, events: list[dict]) -> None:
-        """Берёт события в работу и возвращается сразу (вебхук должен ответить 200 быстро)."""
+        """Takes events into work and returns at once (the webhook must answer 200 quickly)."""
         for ev in events:
             t = asyncio.create_task(self._handle(ev))
             self._tasks.add(t)
@@ -259,11 +259,11 @@ class Gateway:
         s = self._sessions.get(self.user_key(user_id))
         return s.agent if s else None
 
-    # -- внутреннее
+    # -- internal
     async def _handle(self, ev: dict) -> None:
         try:
             await self._dispatch(ev)
-        except Exception as e:  # noqa: BLE001  — одно плохое событие не должно ронять остальные
+        except Exception as e:  # noqa: BLE001  — one bad event must not bring down the rest
             self.last_error = e
             log.exception("event failed: %s", type(e).__name__)
 
@@ -279,7 +279,7 @@ class Gateway:
         return True
 
     def _allow(self, key: str) -> bool | None:
-        """True — можно; False — первое превышение (ответить предупреждением); None — молча пропустить."""
+        """True: allowed; False: the first excess (answer with a warning); None: skip silently."""
         now, q = time.monotonic(), self._hits.setdefault(key, deque())
         while q and now - q[0] > 60:
             q.popleft()
@@ -297,7 +297,7 @@ class Gateway:
             if not token:
                 raise httpx.HTTPError("no reply token")
             await self.sender.reply(token, texts)
-        except Exception:  # noqa: BLE001  — токен ответа истёк или не принят: пробуем Push
+        except Exception:  # noqa: BLE001  — the reply token expired or was rejected: try Push
             try:
                 await self.sender.push(user_id, texts)
             except Exception as e:  # noqa: BLE001
@@ -310,7 +310,7 @@ class Gateway:
         src = ev.get("source") or {}
         uid = src.get("userId")
         if src.get("type") != "user" or not uid:
-            return                                              # группы и комнаты: молчим
+            return                                              # groups and rooms: stay silent
         token, kind = ev.get("replyToken"), ev.get("type")
         if kind == "follow":
             return await self._send(token, uid, [GREETING])
@@ -354,7 +354,7 @@ class Gateway:
 
     def _make_room(self) -> None:
         while len(self._sessions) >= self.max_sessions:
-            oldest = next(iter(self._sessions))                  # самая давняя по созданию
+            oldest = next(iter(self._sessions))                  # the oldest by creation
             self._sessions.pop(oldest).stop()
 
 
@@ -367,10 +367,10 @@ class LineSettings:
 
     @staticmethod
     def from_env() -> "LineSettings":
-        from dental.agent.llm import _env            # окружение, затем .env (как для ключей LLM и DATABASE_URL)
+        from dental.agent.llm import _env            # environment, then .env (as for LLM keys and DATABASE_URL)
         secret = _env("LINE_CHANNEL_SECRET") or ""
         if not secret:
-            raise SystemExit("нет LINE_CHANNEL_SECRET: без него подпись вебхука проверить нечем, сервер не запускается")
+            raise SystemExit("no LINE_CHANNEL_SECRET: without it the webhook signature cannot be verified, the server does not start")
         return LineSettings(secret, _env("LINE_CHANNEL_ACCESS_TOKEN") or "", _env("LINE_USER_SALT") or "dental-agent")
 
 
@@ -382,7 +382,7 @@ def create_app(secret: str, gateway: Gateway) -> Starlette:
         if len(body) > MAX_BODY:
             return Response(status_code=413)
         if not verify_signature(secret, body, request.headers.get("x-line-signature")):
-            return Response(status_code=401)                     # до разбора тела: чужой запрос ничего не запускает
+            return Response(status_code=401)                     # before parsing the body: a foreign request triggers nothing
         try:
             events = json.loads(body).get("events", [])
             if not isinstance(events, list) or not all(isinstance(e, dict) for e in events):

@@ -1,6 +1,6 @@
-"""Генератор синтетики: пациенты, расписание на 8 недель, далёкие повторные записи.
+"""Synthetic data generator: patients, an 8-week schedule, far-off follow-up appointments.
 
-Воспроизводим по seed из clinic.toml. Запуск:
+Reproducible from the seed in clinic.toml. Run:
     uv run python -m dental.synth.generate [--out data/snapshot.json] [--seed N]
 """
 
@@ -21,11 +21,11 @@ from dental.synth import fixtures as fx
 from dental.synth.names import GIVEN, SURNAMES
 
 GENERATOR_VERSION = 1
-TEST_CAP = 1   # у случайных тестовых пациентов не больше одной активной записи
+TEST_CAP = 1   # random test patients have at most one active appointment
 
 
 class Board:
-    """Занятость ячеек (кресло, начало 30-минутного слота)."""
+    """Cell occupancy (chair, start of a 30-minute slot)."""
 
     def __init__(self, slot: timedelta, reserved: set) -> None:
         self.slot = slot
@@ -49,7 +49,7 @@ class Board:
 
 
 class Roster:
-    """Активные записи пациентов: лимит, пересечения, дубль «услуга + день»."""
+    """Patients' active appointments: the limit, overlaps, the "service + day" duplicate."""
 
     def __init__(self, default_cap: int) -> None:
         self.default_cap = default_cap
@@ -84,7 +84,7 @@ def build_snapshot(cfg: ClinicConfig) -> dict:
     syn = cfg.synthetic
     now = cfg.now()
     if now.isoformat() != fx.EXPECTED_NOW:
-        raise ValueError(f"фикстуры рассчитаны на {fx.EXPECTED_NOW}, а в конфиге {now.isoformat()}")
+        raise ValueError(f"the fixtures are built for {fx.EXPECTED_NOW}, but the config has {now.isoformat()}")
     rng = random.Random(syn.seed)
     cal = ClinicCalendar(cfg)
     tz, slot = cal.tz, cal.slot
@@ -92,7 +92,7 @@ def build_snapshot(cfg: ClinicConfig) -> dict:
     today = now.date()
     earliest = now + timedelta(hours=cfg.rules.min_lead_hours)
 
-    # ---------- пациенты ----------
+    # ---------- patients ----------
     fixture_names = {p["name"] for p in fx.FIXTURE_PATIENTS.values()}
     combos = [(s, g) for s in SURNAMES for g in GIVEN]
     rng.shuffle(combos)
@@ -115,7 +115,7 @@ def build_snapshot(cfg: ClinicConfig) -> dict:
         ))
     next_id = max(p["id"] for p in patients) + 1
     card, phone_n = 100100, 100
-    n_test = syn.test_patients - len(fx.FIXTURE_PATIENTS)   # P_NEW входит в 60, но в БД его нет
+    n_test = syn.test_patients - len(fx.FIXTURE_PATIENTS)   # P_NEW counts towards the 60 but is not in the database
     test_ids, bg_ids = [], []
     for group, count, bucket in (("test", n_test, test_ids), ("background", syn.background_patients, bg_ids)):
         for _ in range(count):
@@ -131,7 +131,7 @@ def build_snapshot(cfg: ClinicConfig) -> dict:
     pool = test_ids + bg_ids
     key_to_pid = {k: p["id"] for k, p in fx.FIXTURE_PATIENTS.items() if p["id"] is not None}
 
-    # ---------- записи ----------
+    # ---------- appointments ----------
     reserved = set()
     for d_iso, t0, t1 in fx.RESERVED_FREE:
         for s in _window_starts(cal, date.fromisoformat(d_iso), t0, t1):
@@ -147,7 +147,7 @@ def build_snapshot(cfg: ClinicConfig) -> dict:
         end = start + n * slot
         if status == "active":
             if not board.free(chair, start, n, use_reserved=use_reserved):
-                raise RuntimeError(f"ячейка занята: кресло {chair}, {start.isoformat()}")
+                raise RuntimeError(f"cell taken: chair {chair}, {start.isoformat()}")
             board.take(chair, start, n, len(appts))
             roster.add(pid, service, start, end)
         if created_at is None:
@@ -177,7 +177,7 @@ def build_snapshot(cfg: ClinicConfig) -> dict:
                 end = start + slot
                 pid = pick_patient(service, start, end)
                 if pid is None:
-                    raise RuntimeError("пул пациентов исчерпан (F_BUSY/F_FULL)")
+                    raise RuntimeError("patient pool exhausted (F_BUSY/F_FULL)")
                 add_appt(pid, service, chair, start, "active", syn.background_source, use_reserved=False)
 
     codes = list(cfg.services)
@@ -211,10 +211,10 @@ def build_snapshot(cfg: ClinicConfig) -> dict:
                 if pid is not None:
                     break
             else:
-                raise RuntimeError("пул пациентов исчерпан")
+                raise RuntimeError("patient pool exhausted")
             add_appt(pid, service, chair, start, "active", syn.background_source)
 
-    # далёкие повторные приёмы: чистка и чекап за пределами 8 недель (до 200 дней)
+    # far-off follow-up visits: cleaning and check-up beyond the 8 weeks (up to 200 days)
     jan = {date.fromisoformat(x) for x in fx.F_JAN_DAYS}
     for _ in range(syn.far_recall_count):
         service = rng.choice(["cleaning", "kenshin"])
@@ -230,7 +230,7 @@ def build_snapshot(cfg: ClinicConfig) -> dict:
                 add_appt(pid, service, chair, start, "active", syn.background_source)
                 break
         else:
-            raise RuntimeError("не удалось поставить далёкую запись")
+            raise RuntimeError("could not place a far-off appointment")
 
     appts.sort(key=lambda a: (a["start"], a["chair_id"], a["patient_id"]))
     for i, a in enumerate(appts, 1):
@@ -275,7 +275,7 @@ def main(argv: list[str] | None = None) -> int:
 
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--out", default=str(ROOT / "data" / "snapshot.json"))
-    ap.add_argument("--seed", type=int, help="перекрыть seed из clinic.toml (для проверки устойчивости)")
+    ap.add_argument("--seed", type=int, help="override the seed from clinic.toml (to check robustness)")
     args = ap.parse_args(argv)
 
     cfg = load_config(CONFIG_PATH)
@@ -289,17 +289,17 @@ def main(argv: list[str] | None = None) -> int:
 
     st = load_stats(snap, cfg)
     print(f"seed={snap['meta']['seed']}  config={snap['meta']['config_sha']}  snapshot={snap['meta']['snapshot_sha']}")
-    print(f"пациентов в БД: {len(snap['patients'])}  записей: {st['appointments_total']} "
-          f"(активных {st['active']}, далёких {st['far']})")
-    print("занятость по неделям:", " ".join(f"{x:.0%}" for x in st["occupancy_by_week"]),
-          f"| всё окно {st['occupancy_all']:.0%}")
-    print(f"файл: {out}")
+    print(f"patients in the database: {len(snap['patients'])}  appointments: {st['appointments_total']} "
+          f"(active {st['active']}, far-off {st['far']})")
+    print("occupancy by week:", " ".join(f"{x:.0%}" for x in st["occupancy_by_week"]),
+          f"| whole window {st['occupancy_all']:.0%}")
+    print(f"file: {out}")
     if problems:
-        print(f"\nПРОБЛЕМЫ ({len(problems)}):")
+        print(f"\nPROBLEMS ({len(problems)}):")
         for p in problems[:30]:
             print(" -", p)
         return 1
-    print("проверки: все гарантии фикстур и инварианты выполнены")
+    print("checks: all fixture guarantees and invariants hold")
     return 0
 
 

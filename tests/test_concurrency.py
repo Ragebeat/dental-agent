@@ -6,7 +6,7 @@ from dental.core import errors as E
 from dental.core.db import connect
 from helpers import KW, NOW, PID, assert_invariants, free_patients, jst, run_parallel
 
-SLOT = jst(2026, 10, 14, 16, 0)       # среда, кресло 4 свободно
+SLOT = jst(2026, 10, 14, 16, 0)       # Wednesday, chair 4 free
 
 
 def count(db_url, sql, *a):
@@ -26,7 +26,7 @@ def test_20_threads_one_slot_pinned_chair(core, db_url):
 
 
 def test_unpinned_exactly_four(core, db_url):
-    """Слот, свободный на всех 4 креслах: 20 желающих → ровно 4 записи."""
+    """A slot free on all 4 chairs: 20 takers → exactly 4 appointments."""
     with connect(db_url) as c:
         c.execute("UPDATE appointments SET status='cancelled', cancelled_at=%s WHERE status='active' AND lower(during) <= %s"
                   " AND upper(during) > %s AND day = %s", [NOW, SLOT, SLOT, SLOT.date()])
@@ -109,6 +109,6 @@ def test_bruteforce_lockout(core, db_url):
     locked = sum(isinstance(r, E.Locked) for k, r in res if k == "err")
     assert bad <= 5 and bad + locked == 30
     assert count(db_url, "SELECT count(*) AS n FROM auth_attempts") == bad
-    # верная дата тоже заблокирована
+    # the correct date is locked too
     with pytest.raises(E.Locked):
         core.verify_patient(100001, date(1988, 4, 12), channel="web", client_key="c2", now=NOW)

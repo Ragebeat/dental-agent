@@ -1,4 +1,4 @@
-"""Гарантии на уровне БД: их не заменяет ни ядро, ни промпт."""
+"""Database-level guarantees: neither the core nor the prompt replaces them."""
 
 import psycopg
 import pytest
@@ -23,7 +23,7 @@ def test_loaded(db_url):
 
 def test_chair_cannot_be_double_booked(db_url):
     with connect(db_url) as c:
-        # кресло 4 вт 2026-10-14 16:00 свободно (резерв). Первая запись проходит, вторая на то же кресло нет.
+        # chair 4 on Wed 2026-10-14 16:00 is free (reserve). The first booking passes, a second on the same chair does not.
         ins(c, 6, "cleaning", 4, jst(2026, 10, 14, 16), jst(2026, 10, 14, 16, 30))
         with pytest.raises(psycopg.errors.ExclusionViolation) as e:
             ins(c, 7, "cleaning", 4, jst(2026, 10, 14, 16), jst(2026, 10, 14, 16, 30))
@@ -37,7 +37,7 @@ def test_partial_overlap_also_blocked_and_adjacent_allowed(db_url):
             ins(c, 7, "cleaning", 4, jst(2026, 10, 14, 14, 30), jst(2026, 10, 14, 15))
         c.rollback()
         ins(c, 6, "chiryo", 4, jst(2026, 10, 14, 14), jst(2026, 10, 14, 15))
-        ins(c, 7, "cleaning", 4, jst(2026, 10, 14, 15), jst(2026, 10, 14, 15, 30))   # встык: можно
+        ins(c, 7, "cleaning", 4, jst(2026, 10, 14, 15), jst(2026, 10, 14, 15, 30))   # back to back: allowed
 
 
 def test_cancelled_does_not_block(db_url):

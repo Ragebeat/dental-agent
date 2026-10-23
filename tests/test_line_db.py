@@ -1,4 +1,4 @@
-"""LINE-канал на живой БД: настоящий MCP-сервер за шлюзом сессий; идентификация приходит с channel='line' и ключом пользователя."""
+"""The LINE channel on a live database: the real MCP server behind the session gateway; identification arrives with channel='line' and the user key."""
 import asyncio
 
 from dental.channels.eval_bridge import USER, LineAgent

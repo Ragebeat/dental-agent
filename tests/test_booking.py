@@ -6,7 +6,7 @@ from dental.core import errors as E
 
 from helpers import KW, NOW, PID, assert_invariants, jst
 
-W = jst(2026, 10, 14, 16, 0)   # среда, кресло 4 свободно
+W = jst(2026, 10, 14, 16, 0)   # Wednesday, chair 4 free
 
 
 def test_success(core, db_url):
@@ -34,11 +34,11 @@ def test_busy_slot_is_taken(core):
 
 
 @pytest.mark.parametrize("start,exc", [
-    (jst(2026, 10, 8, 10, 0), E.ClosedDay),            # четверг
-    (jst(2026, 10, 14, 12, 30), E.OutsideHours),        # перерыв
-    (jst(2026, 10, 14, 9, 15), E.OutsideHours),         # не по сетке
+    (jst(2026, 10, 8, 10, 0), E.ClosedDay),            # Thursday
+    (jst(2026, 10, 14, 12, 30), E.OutsideHours),        # break
+    (jst(2026, 10, 14, 9, 15), E.OutsideHours),         # off the grid
     (jst(2026, 10, 7, 11, 0), E.TooSoon),
-    (jst(2026, 12, 22, 10, 0), E.BeyondHorizon),        # >60 дней
+    (jst(2026, 12, 22, 10, 0), E.BeyondHorizon),        # >60 days
 ])
 def test_validation(core, start, exc):
     with pytest.raises(exc):
@@ -71,7 +71,7 @@ def test_first_visit_rules(core):
     a = core.book(p.id, "shoshin", jst(2026, 10, 14, 14, 0), **KW)
     assert a.service_code == "shoshin"
     with pytest.raises(E.NewPatientOnly):
-        core.book(PID["P_CLEAN"], "shoshin", W, **KW)    # у P_CLEAN есть завершённый визит
+        core.book(PID["P_CLEAN"], "shoshin", W, **KW)    # P_CLEAN has a completed visit
 
 
 def test_idempotency(core, db_url):

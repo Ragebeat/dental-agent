@@ -1,4 +1,4 @@
-"""Выдуманные имена (кандзи, кана). Свои списки, а не Faker: результат не зависит от версии библиотеки."""
+"""Invented names (kanji, kana). Our own lists rather than Faker: the result does not depend on a library version."""
 
 SURNAMES = [
     ("佐藤", "さとう"), ("鈴木", "すずき"), ("高橋", "たかはし"), ("田中", "たなか"), ("伊藤", "いとう"),

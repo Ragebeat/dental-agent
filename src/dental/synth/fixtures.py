@@ -1,10 +1,10 @@
-"""Фикстуры: контракт со сценариями (docs/FIXTURES.md). Даты абсолютные, привязаны к frozen_now."""
+"""Fixtures: the contract with the scenarios (docs/FIXTURES.md). Dates are absolute, tied to frozen_now."""
 
 from __future__ import annotations
 
 EXPECTED_NOW = "2026-10-07T10:00:00+09:00"
 
-# id=None: пациента нет в БД на старте (P_NEW). Телефон у него есть: сценарий его сообщает.
+# id=None: the patient is not in the database at the start (P_NEW). The phone exists: the scenario states it.
 FIXTURE_PATIENTS: dict[str, dict] = {
     "P_CLEAN": dict(id=1, name="鈴木 健太", name_kana="すずき けんた", card=100001, phone="070-0000-0001", birth_date="1988-04-12"),
     "P_ONE":   dict(id=2, name="高橋 さくら", name_kana="たかはし さくら", card=100002, phone="070-0000-0002", birth_date="1979-11-03"),
@@ -14,7 +14,7 @@ FIXTURE_PATIENTS: dict[str, dict] = {
     "P_NEW":   dict(id=None, name="山本 美咲", name_kana="やまもと みさき", card=None, phone="070-0000-0006", birth_date="1995-05-17"),
 }
 
-# Записи фикстур (кресло 1; резерв свободных окон ниже живёт на кресле 4).
+# Fixture appointments (chair 1; the free-window reserve below lives on chair 4).
 FIXTURE_APPOINTMENTS = [
     dict(patient="P_CLEAN", service="cleaning", start="2026-06-05T10:00", chair=1, status="completed"),
     dict(patient="P_ONE",   service="chiryo",   start="2026-10-13T10:30", chair=1, status="active"),
@@ -25,13 +25,13 @@ FIXTURE_APPOINTMENTS = [
     dict(patient="P_TWO",   service="kenshin",  start="2026-10-27T09:30", chair=1, status="active"),
 ]
 
-# Принудительно занято на всех перечисленных креслах: (дата, с, до (не включая), кресла).
+# Forcibly occupied on all listed chairs: (date, from, to (exclusive), chairs).
 FORCED_BUSY = [
     ("2026-10-09", "15:00", "15:30", [1, 2, 3, 4]),   # F_BUSY
-    ("2026-10-13", "16:00", "18:30", [1, 2, 3, 4]),   # F_FULL: все 5 стартов 16:00–18:00
+    ("2026-10-13", "16:00", "18:30", [1, 2, 3, 4]),   # F_FULL: all 5 starts 16:00–18:00
 ]
 
-# Окна, которые фон не занимает (кресло 4): гарантии F_FRI09, F_WED14, F_FRI16, F_NEXTWEEK и сценариев.
+# Windows the background never takes (chair 4): guarantees for F_FRI09, F_WED14, F_FRI16, F_NEXTWEEK and the scenarios.
 RESERVED_CHAIR = 4
 RESERVED_FREE = [
     ("2026-10-09", "14:00", "15:00"), ("2026-10-09", "16:00", "17:30"),
@@ -41,12 +41,12 @@ RESERVED_FREE = [
     ("2026-10-17", "09:00", "11:00"), ("2026-10-17", "14:00", "17:30"),
 ]
 
-# F_JAN: на эти дни не попадает ничего (ни фон, ни далёкие повторные записи).
+# F_JAN: nothing lands on these days (neither background nor far-off follow-up appointments).
 F_JAN_DAYS = ["2027-01-05", "2027-01-06", "2027-01-08", "2027-01-09", "2027-01-12"]
 
-# F_NEXTWEEK: в эти дни минимум столько стартов с хотя бы одним свободным креслом.
+# F_NEXTWEEK: on these days at least this many starts with at least one free chair.
 NEXTWEEK_DAYS = ["2026-10-13", "2026-10-14", "2026-10-16", "2026-10-17"]
 NEXTWEEK_MIN_STARTS = 8
 
-# Ожидаемое число активных записей у фикстурных пациентов.
+# Expected number of active appointments of the fixture patients.
 FIXTURE_ACTIVE_COUNT = {"P_CLEAN": 0, "P_ONE": 1, "P_SOON": 1, "P_OTHER": 2, "P_TWO": 2}

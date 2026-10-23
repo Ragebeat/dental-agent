@@ -1,4 +1,8 @@
-"""MCP-сервер (stdio): один процесс = один разговор = одна сессия DentalTools."""
+"""MCP server (stdio): one process = one conversation = one DentalTools session.
+
+The server instructions and tool docstrings stay in Russian on purpose: they are the tool descriptions
+the model reads, they are part of the run fingerprint (tools hash), and changing them would change
+the measured behaviour."""
 
 from __future__ import annotations
 
@@ -69,7 +73,7 @@ def build_server(core: ClinicCore | None = None, *, now_fn=None, channel: str = 
         tool_errors, other. summary — краткая сводка по делу (до 1000 символов), без пересказа диалога."""
         return t.handoff_to_staff(reason, summary, appointment_id)
 
-    srv._dental_tools = t   # для тестов и симулятора
+    srv._dental_tools = t   # for tests and the simulator
     return srv
 
 

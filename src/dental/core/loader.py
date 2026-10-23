@@ -1,6 +1,6 @@
-"""Миграции и заливка снимка синтетики в Postgres.
+"""Migrations and loading the synthetic snapshot into Postgres.
 
-    uv run python -m dental.core.loader --reset      # пересоздать схему и залить data/snapshot.json
+    uv run python -m dental.core.loader --reset      # recreate the schema and load data/snapshot.json
 """
 
 from __future__ import annotations
@@ -84,7 +84,7 @@ def load_snapshot(conn: psycopg.Connection, snap: dict) -> dict:
     return dict(patients=len(snap["patients"]), appointments=len(snap["appointments"]))
 
 
-# ---------- базы для тестов: шаблон + копии ----------
+# ---------- databases for tests: a template + copies ----------
 def _admin(url: str) -> psycopg.Connection:
     return connect(with_dbname(url, "postgres"), autocommit=True)
 
@@ -114,7 +114,7 @@ def unique_name(prefix: str) -> str:
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--snapshot", default=str(ROOT / "data" / "snapshot.json"))
-    ap.add_argument("--reset", action="store_true", help="удалить схему public и создать заново")
+    ap.add_argument("--reset", action="store_true", help="drop the public schema and create it again")
     args = ap.parse_args(argv)
 
     path = Path(args.snapshot)
@@ -122,18 +122,18 @@ def main(argv: list[str] | None = None) -> int:
         snap = json.loads(path.read_text(encoding="utf-8"))
     else:
         from dental.synth.generate import build_snapshot
-        print(f"{path} нет, строю снимок из clinic.toml в памяти")
+        print(f"{path} is missing, building the snapshot from clinic.toml in memory")
         snap = build_snapshot(load_config())
     url = database_url()
     with connect(url) as conn:
         if args.reset:
             reset_schema(conn)
-        print("миграции:", apply_migrations(conn) or "нечего применять")
+        print("migrations:", apply_migrations(conn) or "nothing to apply")
         have = conn.execute("SELECT count(*) AS n FROM patients").fetchone()["n"]
         if have:
-            print(f"в БД уже {have} пациентов; для чистой заливки запусти с --reset")
+            print(f"the database already has {have} patients; for a clean load run with --reset")
             return 1
-        print("залито:", load_snapshot(conn, snap), "| снимок", snap["meta"]["snapshot_sha"])
+        print("loaded:", load_snapshot(conn, snap), "| snapshot", snap["meta"]["snapshot_sha"])
     return 0
 
 

@@ -5,7 +5,7 @@ import pytest
 from dental.core import errors as E
 from helpers import NOW, PID
 
-BORN = date(1988, 4, 12)    # P_CLEAN, карта 100001
+BORN = date(1988, 4, 12)    # P_CLEAN, card 100001
 
 
 def v(core, card, born, client, i=0, now=None):
@@ -49,9 +49,9 @@ def test_success_resets_the_streak(core):
 def test_client_lockout_across_different_cards(core):
     for i in range(5):
         with pytest.raises(E.PatientNotVerified):
-            v(core, 100010 + i, BORN, "attacker", i)       # перебор разных карт одним клиентом
+            v(core, 100010 + i, BORN, "attacker", i)       # different cards tried by one client
     with pytest.raises(E.Locked):
-        v(core, 100001, BORN, "attacker", 9)               # даже верная пара с этого клиента закрыта
+        v(core, 100001, BORN, "attacker", 9)               # even the correct pair is closed for this client
     assert v(core, 100001, BORN, "honest", 10).id == PID["P_CLEAN"]
 
 
@@ -66,7 +66,7 @@ def test_card_lockout_across_clients(core):
 def test_register_new_patient(core):
     p = core.register_patient(name="山本　美咲", name_kana="やまもと みさき", phone="070-0000-0006",
                               birth_date=date(1995, 5, 17), now=NOW)
-    assert p.card_number == 100604 and p.name == "山本 美咲"       # NFKC: полноширинный пробел нормализован
+    assert p.card_number == 100604 and p.name == "山本 美咲"       # NFKC: the full-width space is normalised
     assert v(core, 100604, date(1995, 5, 17), "n").id == p.id
     with pytest.raises(E.AlreadyRegistered):
         core.register_patient(name="山本 美咲", name_kana="やまもと みさき", phone="070-0000-0006",
@@ -74,7 +74,7 @@ def test_register_new_patient(core):
 
 
 @pytest.mark.parametrize("kw", [
-    dict(name_kana="山本 美咲"),               # кана, а не кандзи
+    dict(name_kana="山本 美咲"),               # kana expected, kanji given
     dict(phone="abc"),
     dict(birth_date=date(2031, 1, 1)),
     dict(name="   "),
