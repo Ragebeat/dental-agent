@@ -13,7 +13,7 @@ Own MCP server, LangGraph agent, Postgres, LINE channel, owner summary, Phoenix 
 
 All data is synthetic. This is a portfolio project, not a deployment into a real clinic. No real patients, phone numbers or medical systems are involved.
 
-**Contents:** [Results](#results) · [What it does](#what-it-does) · [Architecture](#architecture) · [Evaluation method](#evaluation-method) · [What broke and why](#what-broke-and-why) · [Owner summary](#owner-summary) · [Tracing (Phoenix)](#tracing-phoenix) · [LINE channel](#line-channel) · [Security and privacy](#security-and-privacy) · [Taking it to a real clinic](#taking-it-to-a-real-clinic) · [Quickstart](#quickstart) · [Repository layout](#repository-layout) · [Status and limits](#status-and-limits) · [License](#license)
+**Contents:** [Results](#results) · [What it does](#what-it-does) · [Architecture](#architecture) · [Evaluation method](#evaluation-method) · [What broke and why](#what-broke-and-why) · [Owner summary](#owner-summary) · [Tracing (Phoenix)](#tracing-phoenix) · [LINE channel](#line-channel) · [Security and privacy](#security-and-privacy) · [Taking it to a real clinic](#taking-it-to-a-real-clinic) · [Quickstart](#quickstart) · [Repository layout](#repository-layout) · [Status and limits](#status-and-limits) · [Related projects](#related-projects) · [License](#license)
 
 ---
 
@@ -301,6 +301,13 @@ Not done, stated plainly:
 - Sessions are in memory; the fallback LLM call blocks the webhook's event loop (details above).
 - Out of scope for this portfolio version, left as production extensions: an admin interface (editing services, hours and closed days, entering phone bookings through the agent), an interface for external patient agents, operator takeover of a conversation, and the evening variant of the owner summary.
 - Several parameters are assumptions about a clinic (working hours, a two-shift Saturday, 60-minute first visit); they live in config and the database, and can be changed.
+
+---
+
+## Related projects
+
+- [RAG over Japanese labour law](https://github.com/Ragebeat/rag-japanese-labour-law) — retrieval and generation over e-Gov statutes; verbatim quotes checked by code, golden-set eval with run fingerprints.
+- [FormulaFix](https://github.com/Ragebeat/formulafix-llm-eval) — Excel/Sheets formula diagnosis; model comparison with noise control and a hand-audited LLM judge.
 
 ---
 
