@@ -54,7 +54,9 @@ def main(argv=None) -> None:
     a, b = load(refs[0], rows), load(refs[1], rows)
     ma, mb = compute(a["results"]), compute(b["results"])      # recomputed from the results: one definition of every metric
     print(f"A: {a['run_id']}   B: {b['run_id']}")
-    diff = {k: (a["fingerprint"].get(k), b["fingerprint"].get(k)) for k in b["fingerprint"]
+    # The union of keys: a key present in only one run (agent_impl exists for graph runs only) is a difference too
+    keys = sorted(a["fingerprint"].keys() | b["fingerprint"].keys())
+    diff = {k: (a["fingerprint"].get(k), b["fingerprint"].get(k)) for k in keys
             if a["fingerprint"].get(k) != b["fingerprint"].get(k)}
     print("configuration differences:", "none" if not diff else "")
     for k, (x, y) in diff.items():

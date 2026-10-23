@@ -239,22 +239,22 @@
 
 ```bash
 cp .env.example .env                  # задать POSTGRES_PASSWORD (и OPENROUTER_API_KEY для оценки)
-docker compose up -d                  # Postgres 17 на порту хоста 5441
+docker compose up -d --wait           # Postgres 17 на порту хоста 5441
 uv sync
 
 uv run python -m dental.synth.generate          # снимок синтетической клиники (с зерном, детерминированно)
 uv run python -m dental.core.loader --reset     # загрузить схему и снимок
 
-uv run pytest                                   # ~180 тестов; тесты с базой требуют контейнер
+uv run pytest                                   # 246 тестов; тесты с базой требуют контейнер
 
 # оценка (каждый прогон пишется в data/runs.jsonl)
-uv run python -m dental.eval.run --agent graph --label graph-v6
+uv run python -m dental.eval.run --agent graph --label graph-v7
 uv run python -m dental.eval.run --agent baseline --label baseline-v1
 uv run python -m dental.eval.compare --list
 uv run python -m dental.eval.compare -2 -1      # сравнить два прогона по сценариям
 
 # по желанию
-uv run python -m dental.eval.run --agent graph --channel line --label graph-v6_line   # через вебхук LINE
+uv run python -m dental.eval.run --agent graph --channel line --label graph-v7_line   # через вебхук LINE
 uv run python -m dental.eval.run --agent graph --scenarios s01 --repeats 1 --trace    # трассы в Phoenix (127.0.0.1:6006)
 uv run python -m dental.summary --profile local                                        # утренняя сводка владельцу
 uv run python -m dental.channels check                                                  # проверить реквизиты LINE

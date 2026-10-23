@@ -239,22 +239,22 @@
 
 ```bash
 cp .env.example .env                  # POSTGRES_PASSWORD を設定（評価には OPENROUTER_API_KEY も）
-docker compose up -d                  # ホストのポート 5441 で Postgres 17
+docker compose up -d --wait           # ホストのポート 5441 で Postgres 17
 uv sync
 
 uv run python -m dental.synth.generate          # 合成クリニックのスナップショット（シード付き、決定的）
 uv run python -m dental.core.loader --reset     # スキーマとスナップショットを読み込む
 
-uv run pytest                                   # 約 180 テスト。DB を使うテストにはコンテナが必要
+uv run pytest                                   # 246 テスト。DB を使うテストにはコンテナが必要
 
 # 評価（各実行は data/runs.jsonl に記録される）
-uv run python -m dental.eval.run --agent graph --label graph-v6
+uv run python -m dental.eval.run --agent graph --label graph-v7
 uv run python -m dental.eval.run --agent baseline --label baseline-v1
 uv run python -m dental.eval.compare --list
 uv run python -m dental.eval.compare -2 -1      # 2 つの実行をシナリオ別に比較
 
 # 任意
-uv run python -m dental.eval.run --agent graph --channel line --label graph-v6_line   # LINE の Webhook 経由
+uv run python -m dental.eval.run --agent graph --channel line --label graph-v7_line   # LINE の Webhook 経由
 uv run python -m dental.eval.run --agent graph --scenarios s01 --repeats 1 --trace    # Phoenix にトレース (127.0.0.1:6006)
 uv run python -m dental.summary --profile local                                        # オーナー向けの朝のサマリー
 uv run python -m dental.channels check                                                  # LINE の認証情報を確認

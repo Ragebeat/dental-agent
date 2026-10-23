@@ -239,22 +239,22 @@ Requirements: Python 3.14, [uv](https://docs.astral.sh/uv/), Docker, [Ollama](ht
 
 ```bash
 cp .env.example .env                  # set POSTGRES_PASSWORD (and OPENROUTER_API_KEY for eval)
-docker compose up -d                  # Postgres 17 on host port 5441
+docker compose up -d --wait           # Postgres 17 on host port 5441
 uv sync
 
 uv run python -m dental.synth.generate          # synthetic clinic snapshot (seeded, deterministic)
 uv run python -m dental.core.loader --reset     # load schema and snapshot
 
-uv run pytest                                   # ~180 tests; DB tests need the container
+uv run pytest                                   # 246 tests; DB tests need the container
 
 # evaluation (each run is written to data/runs.jsonl)
-uv run python -m dental.eval.run --agent graph --label graph-v6
+uv run python -m dental.eval.run --agent graph --label graph-v7
 uv run python -m dental.eval.run --agent baseline --label baseline-v1
 uv run python -m dental.eval.compare --list
 uv run python -m dental.eval.compare -2 -1      # diff two runs by scenario
 
 # optional
-uv run python -m dental.eval.run --agent graph --channel line --label graph-v6_line   # through the LINE webhook
+uv run python -m dental.eval.run --agent graph --channel line --label graph-v7_line   # through the LINE webhook
 uv run python -m dental.eval.run --agent graph --scenarios s01 --repeats 1 --trace    # traces in Phoenix (127.0.0.1:6006)
 uv run python -m dental.summary --profile local                                        # owner's morning summary
 uv run python -m dental.channels check                                                  # verify LINE credentials
