@@ -11,7 +11,7 @@ def test_booking_happy_path_confirms_only_after_tool():
     r = d.say("クリーニングの予約をお願いしたいです")
     assert "AIの予約アシスタント" in r and "診察券番号" in r and not d.called("book_appointment")
     r = d.say(ID)
-    assert "ご希望の日にち" in r and not d.called("search_slots")           # no date given — ask for one
+    assert "ご希望の日にち" in r and not d.called("search_slots")           # no date given: ask for one
     r = d.say("来週の水曜の午後")
     assert "10月14日" in r and "14:00" in r and "15:30" in r
     r = d.say("2番でお願いします")
@@ -200,7 +200,7 @@ def test_exact_time_missing_offers_same_day_neighbours_first():
 
 
 def test_stepwise_registration_is_not_handed_off():
-    """h10: the patient gives the data in parts — that is progress, not ambiguity."""
+    """h10: the patient gives the data in parts; that is progress, not ambiguity."""
     d = Dialog()
     d.say("初めての予約をお願いします。来週の金曜日の午後に初診を入れたいです")
     d.say("山本 美咲と申します。")

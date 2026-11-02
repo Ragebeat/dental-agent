@@ -44,7 +44,7 @@ from dental.agent.understand import (
 GRAPH_VERSION = "graph-v7"
 WD = "月火水木金土日"
 REG_LABEL = {"name": "お名前（漢字）", "name_kana": "ふりがな", "phone": "お電話番号", "birth_date": "生年月日（西暦）"}
-MAX_ASKS = 2                       # after two clarifications about the same thing — handoff to a human
+MAX_ASKS = 2                       # after two clarifications about the same thing: handoff to a human
 THANKS = re.compile(r"ありがとう|了解|承知|助かり|失礼|よろしくお願いいたします")
 FALLBACK = "申し訳ございません、うまく処理できませんでした。担当スタッフから改めてご連絡いたします。"
 
@@ -147,7 +147,7 @@ class GraphAgent:
         self.app = self._build()
         self.cfg = {"configurable": {"thread_id": "dialog"}, "recursion_limit": 40}
 
-    # ---------- tools and LLM ----------
+    # --- tools and LLM ---
     async def _tool(self, name: str, args: dict) -> dict:
         with tracing.span(f"tool.{name}", "TOOL", attrs={"tool.name": name, "tool.args": args}) as sp:
             try:
@@ -189,7 +189,7 @@ class GraphAgent:
             self._cancel_hours = res.get("cancel_free_until_hours_before", 24) or 24
         return self._services
 
-    # ---------- helpers ----------
+    # --- helpers ---
     @staticmethod
     def _out(s: S, text: str, **u) -> dict:
         """Reply plus accumulated notes; on the first message, the AI introduces itself."""
@@ -211,7 +211,7 @@ class GraphAgent:
     def _svc(self, code: str) -> dict:
         return next((x for x in (self._services or []) if x["code"] == code), {"code": code, "label_ja": code, "minutes": None})
 
-    # ---------- graph ----------
+    # --- graph ---
     def _build(self):
         g = StateGraph(S)
         nodes = {"ingest": self.n_ingest, "handoff": self.n_handoff, "closing": self.n_closing, "flag_manip": self.n_flag_manip,
@@ -227,7 +227,7 @@ class GraphAgent:
         return g.compile(checkpointer=MemorySaver())
 
     def _traced(self, name: str, fn):
-        """A graph node as a span: only metadata goes into the trace — which state keys changed, the handoff reason, the reply length."""
+        """A graph node as a span: only metadata goes into the trace, which state keys changed, the handoff reason, the reply length."""
         async def run(s: S) -> dict:
             with tracing.span(f"node.{name}", "CHAIN", attrs={"graph.node": name, "graph.turn": self.turn}) as sp:
                 out = await fn(s)
@@ -282,7 +282,7 @@ class GraphAgent:
             tracing.set_attrs(sp, {"output.value": text, "graph.reply_chars": len(text)})
             return text
 
-    # ---------- nodes ----------
+    # --- nodes ---
     async def n_ingest(self, s: S) -> dict:
         text = s["text"]
         u: dict[str, Any] = {"reply": None, "yn": None, "choice_idx": None}
@@ -338,7 +338,7 @@ class GraphAgent:
                 and (sv := parse_service(text, services)) and not s.get("is_new")):
             u["service"] = sv
             if not (u.get("action") or s.get("action")):
-                u["action"] = "book"                # «クリーニングをお願いします» — no verb, but it is a booking
+                u["action"] = "book"                # «クリーニングをお願いします»: no verb, but it is a booking
         old = self._intent(s)
         new = parse_ja(ids)
         opts = s.get("options") or []
@@ -353,7 +353,7 @@ class GraphAgent:
             if changed or new.asap:
                 merged = merge_intent(old, new)
                 if changed:
-                    u.update(options=[], chosen=None)             # the conditions changed — the old options are void
+                    u.update(options=[], chosen=None)             # the conditions changed: the old options are void
                 u["intent"] = merged.model_dump()
         return u
 
@@ -524,7 +524,7 @@ class GraphAgent:
 
     @staticmethod
     def _spread(slots: list[tuple[str, str]], n: int) -> list[tuple[str, str]]:
-        """Different days round-robin: the first slot of each day, then the next ones — so the options are not all on one day."""
+        """Different days round-robin: the first slot of each day, then the next ones, so the options are not all on one day."""
         by_day: dict[str, list[tuple[str, str]]] = {}
         for sl in slots:
             by_day.setdefault(sl[0], []).append(sl)

@@ -121,7 +121,7 @@ def main(argv=None) -> None:
             try:
                 res = run_scenario(sc, cfg, agent_llm, sim_llm, admin_url=admin_url, template_db=tpl, settings=settings,
                                    tags={"run_id": run_id, "repeat": rep})
-            except Exception as e:  # noqa: BLE001  — a harness bug must not bring down the whole run
+            except Exception as e:  # noqa: BLE001    a harness bug must not bring down the whole run
                 res = {"scenario_id": sc.id, "ended_by": "error", "error": f"{type(e).__name__}: {e}",
                        "trace": traceback.format_exc()[-1500:], "transcript": [], "tool_events": [], "turns": 0,
                        "agent_usage": {"calls": 0, "prompt_tokens": 0, "completion_tokens": 0, "cost": 0, "latencies": []},

@@ -1,6 +1,6 @@
 """Parsing patient messages in code: card number, dates, phone, name, service, action, yes/no, option choice, dangerous requests.
 
-Pure functions with no LLM and no database — ordinary tests cover them. The graph needs the LLM only where the rules found nothing
+Pure functions with no LLM and no database: ordinary tests cover them. The graph needs the LLM only where the rules found nothing
 (and even then only for explicitly stated values, not for guesses).
 """
 from __future__ import annotations
@@ -17,7 +17,7 @@ def norm(text: str) -> str:
     return unicodedata.normalize("NFKC", text)
 
 
-# ---------- identification ----------
+# --- identification ---
 def parse_card(text: str) -> int | None:
     m = re.search(r"(?<!\d)(\d{6})(?!\d)", norm(text))
     return int(m.group(1)) if m else None
@@ -57,7 +57,7 @@ def parse_name_kana(text: str) -> tuple[str, str] | None:
         return None
     name = _NAME_PREFIX.sub("", m.group(1)).strip()
     parts = re.split(r"[ \u3000]+", name)
-    if len(parts) >= 2:                                   # «山本 美咲» — family and given name; an extra word before them («こんにちは 山本美咲») is dropped
+    if len(parts) >= 2:                                   # «山本 美咲»: family and given name; an extra word before them («こんにちは 山本美咲») is dropped
         name = " ".join(parts[-2:]) if all(len(x) <= 4 for x in parts[-2:]) and len(parts) == 2 else parts[-1]
     kana = to_hiragana(re.sub(r"[\s\u3000]+", " ", m.group(2)).strip())
     return (name, kana) if len(name.replace(" ", "")) >= 2 else None
@@ -92,7 +92,7 @@ def parse_reg_part(text: str, need: list[str]) -> dict:
 NEW_PATIENT = re.compile(r"初めて|はじめて|初診|新規|新患|診察券(?:は)?(?:持っていません|ありません|ない|を持っていない)|カード(?:は)?(?:持っていません|ありません)")
 
 
-# ---------- intent ----------
+# --- intent ---
 _CANCEL = re.compile(r"キャンセル|取り消|取消|やめたい|行けなくな|行けない")
 _RESCHEDULE = re.compile(r"変更|変えたい|変えて|変えられ|変えれ|変わりたい|ずらし|ずらせ|振替|振り替え|日にちを変|別の日|移したい|動かし|リスケ|延期")
 _BOOK = re.compile(r"予約|取りたい|入れたい|入れて|お願いしたい|診てもらい|見てもらい|受けたい|行きたい")
@@ -132,7 +132,7 @@ def parse_service(text: str, services: list[dict] | None = None) -> str | None:
     return None
 
 
-# ---------- yes / no ----------
+# --- yes / no ---
 _NO = re.compile(r"いいえ|違(?:う|い|います)|やめ|やっぱ|だめ|ダメ|駄目|ではなく|じゃなく|別の|他の|やり直|変え|キャンセル|結構です")
 _YES = re.compile(r"^(?:はい|ええ|うん|そう|OK|ok|オッケー|お願い)|お願いします|それで(?:お願い|いい|大丈夫|結構)|でいい|で大丈夫|大丈夫です|構いません|問題ありません|確定して|よろしく")
 
@@ -146,7 +146,7 @@ def parse_yesno(text: str) -> bool | None:
     return None
 
 
-# ---------- option choice ----------
+# --- option choice ---
 _ORD = {"1": 0, "2": 1, "3": 2, "一": 0, "二": 1, "三": 2}
 
 
@@ -197,7 +197,7 @@ def merge_intent(old: DateIntent, new: DateIntent) -> DateIntent:
     return out
 
 
-# ---------- dangerous requests ----------
+# --- dangerous requests ---
 MANIPULATION = re.compile(r"これまでの指示|指示は?(?:すべて|全て)無視|システムメッセージ|\[システム|管理者権限|すべての予約枠|全ての予約枠|"
                           r"ignore (?:all|previous|the)|system prompt|プロンプト|ジェイルブレイク", re.I)
 COMPLAINT = re.compile(r"クレーム|苦情|最悪|責任者|訴え|許せない|ひどい(?:対応|扱い|態度)")

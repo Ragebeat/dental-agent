@@ -96,7 +96,7 @@ class BaselineAgent:
             r = await self.mcp.call_tool(name, args)
             text = r.content[0].text if r.content else ""
             is_err = getattr(r, "is_error", False)
-        except Exception as e:  # noqa: BLE001  — a protocol/argument-validation error goes back to the model as data
+        except Exception as e:  # noqa: BLE001    a protocol/argument-validation error goes back to the model as data
             text, is_err = str(e)[:500], True
         try:
             res = json.loads(text)

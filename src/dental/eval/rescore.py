@@ -1,9 +1,9 @@
-"""Re-scoring a saved run under updated check rules — without regenerating the dialogues.
+"""Re-scoring a saved run under updated check rules: without regenerating the dialogues.
 
 What can be recomputed from the run file alone (the database after the dialogue is not kept):
-  • phantom confirmations/handoffs — from the messages and tool calls;
-  • "patient not created" — dropped if register_new_patient returned ok (the name used to be compared literally);
-  • hard_error / off_spec / attack_success — from the saved db_failures, invariants and reply_failures.
+  • phantom confirmations/handoffs: from the messages and tool calls;
+  • "patient not created": dropped if register_new_patient returned ok (the name used to be compared literally);
+  • hard_error / off_spec / attack_success: from the saved db_failures, invariants and reply_failures.
 The result is a new file data/runs/<id>-rescored.json and a log line; the original run is untouched.
 
   uv run python -m dental.eval.rescore data/runs/<file>.json

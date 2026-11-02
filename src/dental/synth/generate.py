@@ -92,7 +92,7 @@ def build_snapshot(cfg: ClinicConfig) -> dict:
     today = now.date()
     earliest = now + timedelta(hours=cfg.rules.min_lead_hours)
 
-    # ---------- patients ----------
+    # --- patients ---
     fixture_names = {p["name"] for p in fx.FIXTURE_PATIENTS.values()}
     combos = [(s, g) for s in SURNAMES for g in GIVEN]
     rng.shuffle(combos)
@@ -133,7 +133,7 @@ def build_snapshot(cfg: ClinicConfig) -> dict:
     pool = test_ids + bg_ids
     key_to_pid = {k: p["id"] for k, p in fx.FIXTURE_PATIENTS.items() if p["id"] is not None}
 
-    # ---------- appointments ----------
+    # --- appointments ---
     reserved = set()
     for d_iso, t0, t1 in fx.RESERVED_FREE:
         for s in _window_starts(cal, date.fromisoformat(d_iso), t0, t1):

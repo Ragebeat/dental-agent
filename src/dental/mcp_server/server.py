@@ -34,12 +34,12 @@ def build_server(core: ClinicCore | None = None, *, now_fn=None, channel: str = 
     def search_slots(service: str, date_from: str, date_to: str, time_from: str | None = None,
                      time_to: str | None = None) -> dict:
         """Свободное время начала для услуги (code из list_services) за период. Даты YYYY-MM-DD, период не больше
-        14 дней, time_from/time_to HH:MM — необязательный фильтр по времени суток. Список полный."""
+        14 дней, time_from/time_to HH:MM; необязательный фильтр по времени суток. Список полный."""
         return t.search_slots(service, date_from, date_to, time_from, time_to)
 
     @srv.tool()
     def verify_identity(card_number: int, birth_date: str) -> dict:
-        """Подтвердить личность пациента: номер карты и дата рождения (YYYY-MM-DD). После 5 неудач — блокировка."""
+        """Подтвердить личность пациента: номер карты и дата рождения (YYYY-MM-DD). После 5 неудач; блокировка."""
         return t.verify_identity(card_number, birth_date)
 
     @srv.tool()
@@ -54,7 +54,7 @@ def build_server(core: ClinicCore | None = None, *, now_fn=None, channel: str = 
 
     @srv.tool()
     def book_appointment(service: str, start: str, note: str | None = None) -> dict:
-        """Записать подтверждённого пациента: service — code, start — YYYY-MM-DDTHH:MM (Токио), точно из search_slots."""
+        """Записать подтверждённого пациента: service (code, start) YYYY-MM-DDTHH:MM (Токио), точно из search_slots."""
         return t.book_appointment(service, start, note)
 
     @srv.tool()
@@ -70,7 +70,7 @@ def build_server(core: ClinicCore | None = None, *, now_fn=None, channel: str = 
     @srv.tool()
     def handoff_to_staff(reason: str, summary: str, appointment_id: int | None = None) -> dict:
         """Передать разговор сотруднику. reason: medical, ambiguity, late_cancel, manipulation, complaint,
-        tool_errors, other. summary — краткая сводка по делу (до 1000 символов), без пересказа диалога."""
+        tool_errors, other. summary: краткая сводка по делу (до 1000 символов), без пересказа диалога."""
         return t.handoff_to_staff(reason, summary, appointment_id)
 
     srv._dental_tools = t   # for tests and the simulator

@@ -1,7 +1,7 @@
 """Relative dates and times of day, parsed entirely in code, no LLM.
 
 Two entry points produce the same `DateIntent` structure:
-  • parse_ja(text) — deterministic parsing of common Japanese phrases («来週の金曜の午前», «明後日の夕方», «月末»);
+  • parse_ja(text): deterministic parsing of common Japanese phrases («来週の金曜の午前», «明後日の夕方», «月末»);
   • the LLM can fill `DateIntent` itself (JSON schema: DateIntent.model_json_schema()) for wordings the rules miss.
 `resolve(intent, now)` turns the intent into a slot-search window: a date range (at most 14 days, the search_slots limit)
 and a window of start times. The model does no date arithmetic: a week starts on Monday, «金曜» alone is the nearest Friday after today.
@@ -28,7 +28,7 @@ PARTS: dict[str, tuple[time, time]] = {
 
 
 class DateIntent(BaseModel):
-    """Что пациент сказал про дату и время. Пустые поля — не сказал."""
+    """Что пациент сказал про дату и время. Пустые поля: не сказал."""
     day_offset: int | None = Field(None, description="через сколько дней от сегодня: 0 сегодня, 1 завтра, 2 послезавтра")
     week_offset: int | None = Field(None, description="0 эта неделя, 1 следующая (来週), 2 через неделю (再来週)")
     month_offset: int | None = Field(None, description="0 этот месяц, 1 следующий (来月), 2 через месяц")
@@ -58,7 +58,7 @@ class Window(BaseModel):
     note: str = ""
 
 
-# ---------- parsing Japanese text ----------
+# --- parsing Japanese text ---
 _REL_DAY = (("明後日", 2), ("あさって", 2), ("明日", 1), ("あした", 1), ("あす", 1), ("今日", 0), ("本日", 0), ("きょう", 0))
 _PART_WORDS = (("午前", "morning"), ("朝", "morning"), ("午後", "afternoon"), ("夕方", "evening"), ("夜", "night"), ("晩", "night"))
 _ASAP = re.compile(r"なるべく早く|できるだけ早く|出来るだけ早く|早めに|最短|いつでも|お任せ")
@@ -136,7 +136,7 @@ def parse_ja(text: str) -> DateIntent:
     return it
 
 
-# ---------- computing the window ----------
+# --- computing the window ---
 def _month_start(d: date, offset: int) -> date:
     idx = d.year * 12 + d.month - 1 + offset
     return date(idx // 12, idx % 12 + 1, 1)

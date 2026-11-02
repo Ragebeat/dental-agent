@@ -84,7 +84,7 @@ def load_snapshot(conn: psycopg.Connection, snap: dict) -> dict:
     return dict(patients=len(snap["patients"]), appointments=len(snap["appointments"]))
 
 
-# ---------- databases for tests: a template + copies ----------
+# --- databases for tests: a template + copies ---
 def _admin(url: str) -> psycopg.Connection:
     return connect(with_dbname(url, "postgres"), autocommit=True)
 

@@ -60,7 +60,7 @@ TURN_LIMIT = "やり取りが長くなりましたので、いったん終了い
 APOLOGY = "申し訳ありません。ただいま処理できませんでした。しばらくしてからもう一度お試しください。"
 
 
-# ---------- signature ----------
+# --- signature ---
 def sign(secret: str, body: bytes) -> str:
     return base64.b64encode(hmac.new(secret.encode(), body, hashlib.sha256).digest()).decode()
 
@@ -71,7 +71,7 @@ def verify_signature(secret: str, body: bytes, header: str | None) -> bool:
     return hmac.compare_digest(sign(secret, body).encode(), header.encode())
 
 
-# ---------- sending ----------
+# --- sending ---
 class Sender(Protocol):
     async def reply(self, token: str, texts: list[str]) -> None: ...
     async def push(self, user_id: str, texts: list[str]) -> None: ...
@@ -121,7 +121,7 @@ class RecordingSender:
         return ["\n".join(t) for _, _, t in self.sent]
 
 
-# ---------- sessions ----------
+# --- sessions ---
 class SessionFactory(Protocol):
     def open(self, user_key: str, now: datetime) -> contextlib.AbstractAsyncContextManager:   # -> an agent with .reply()
         ...
@@ -219,7 +219,7 @@ class _Session:
         self.queue.put_nowait(None)
 
 
-# ---------- gateway ----------
+# --- gateway ---
 class Gateway:
     def __init__(self, factory: SessionFactory, sender: Sender, *, now_fn: Callable[[], datetime], salt: str = "dental-agent",
                  ttl_s: float = 1800, max_sessions: int = 500, max_turns: int = 40, rate_per_min: int = 15,
@@ -263,7 +263,7 @@ class Gateway:
     async def _handle(self, ev: dict) -> None:
         try:
             await self._dispatch(ev)
-        except Exception as e:  # noqa: BLE001  — one bad event must not bring down the rest
+        except Exception as e:  # noqa: BLE001    one bad event must not bring down the rest
             self.last_error = e
             log.exception("event failed: %s", type(e).__name__)
 
@@ -297,7 +297,7 @@ class Gateway:
             if not token:
                 raise httpx.HTTPError("no reply token")
             await self.sender.reply(token, texts)
-        except Exception:  # noqa: BLE001  — the reply token expired or was rejected: try Push
+        except Exception:  # noqa: BLE001    the reply token expired or was rejected: try Push
             try:
                 await self.sender.push(user_id, texts)
             except Exception as e:  # noqa: BLE001
@@ -358,7 +358,7 @@ class Gateway:
             self._sessions.pop(oldest).stop()
 
 
-# ---------- HTTP ----------
+# --- HTTP ---
 @dataclass(frozen=True)
 class LineSettings:
     channel_secret: str

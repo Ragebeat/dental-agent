@@ -166,7 +166,7 @@ def test_invariant_closed_time_booking(core, db_url):
     assert v.wrong_booking and any("вне часов" in i for i in v.invariants)
 
 
-# ---------- fabricated confirmations / handoffs ----------
+# --- fabricated confirmations / handoffs ---
 from dental.eval.checks import phantom_claims  # noqa: E402
 
 BOOK_OK = {"name": "book_appointment", "args": {}, "result": {"ok": True}, "turn": 2}
@@ -199,12 +199,12 @@ def test_failed_tool_call_is_phantom():
     assert phantom_claims(["ご予約が確定いたしました。"], [bad])[0] == [1]
 
 
-# ---------- harness fixes after the first full run ----------
+# --- harness fixes after the first full run ---
 def test_cancel_text_is_not_booking_confirmation():
     t = "高橋様、ご予約は、無事にキャンセルが完了いたしました。"
     cancel_ok = {"name": "cancel_appointment", "args": {}, "result": {"ok": True}, "turn": 1}
     assert phantom_claims([t], [cancel_ok]) == ([], [])
-    assert phantom_claims([t], [])[0] == [1]           # no cancel call — still a phantom (as a cancellation)
+    assert phantom_claims([t], [])[0] == [1]           # no cancel call: still a phantom (as a cancellation)
 
 
 def test_handoff_promised_before_call_is_not_phantom():

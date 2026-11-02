@@ -70,7 +70,7 @@ class ManualSimulator:
         return self._wait()
 
 
-# ---------- player commands ----------
+# --- player commands ---
 def _dialog_text(d) -> str:
     out, n = [], 0
     while (d / f"turn_{n}_patient.txt").exists() or (d / f"turn_{n}_agent.txt").exists():

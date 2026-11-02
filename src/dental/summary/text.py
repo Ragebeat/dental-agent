@@ -1,8 +1,8 @@
 """Deterministic summary text (JA/RU) and checking any text against the facts.
 
 The template is the reference and the fallback: if the LLM fails the check, the template goes into the report. The check:
-  recall        — every cancellation, new patient, new booking and open handoff is mentioned by reference [C640], [N100010], [B12], [H3];
-  fabrications  — a reference absent from the facts; a number absent from the facts' numbers; no total of today's appointments in the text.
+  recall          every cancellation, new patient, new booking and open handoff is mentioned by reference [C640], [N100010], [B12], [H3];
+  fabrications    a reference absent from the facts; a number absent from the facts' numbers; no total of today's appointments in the text.
 """
 
 from __future__ import annotations

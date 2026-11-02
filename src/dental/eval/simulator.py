@@ -59,7 +59,7 @@ class Simulator:
     def _next(self, incoming: str) -> tuple[str, bool]:
         self.messages.append({"role": "user", "content": incoming})
         raw = ""
-        for _ in range(3):                  # the simulator model sometimes returns an empty answer — not a patient message, ask again
+        for _ in range(3):                  # the simulator model sometimes returns an empty answer, not a patient message, ask again
             r = self.llm.chat(self.messages)
             self.usage.add(r)
             raw = (r.text or "").strip()

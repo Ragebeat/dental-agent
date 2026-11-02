@@ -19,7 +19,7 @@ finish_reason, tool result codes, references, the verdict) is always written. Fo
   $env:TRACE_CONTENT=1
 
 and then the text still goes through scrub(): phones, birth dates, 6-digit card numbers → [PHONE] [BIRTH] [CARD].
-Names cannot be caught with regexes — full content is fit only for synthetic data, not for real patients.
+Names cannot be caught with regexes: full content is fit only for synthetic data, not for real patients.
 
 The mask lives in one place, set_attrs(); there is no way to write an attribute around it.
 """
@@ -35,7 +35,7 @@ try:
     from opentelemetry import trace
     from opentelemetry.trace import Status, StatusCode
     _OTEL = True
-except ImportError:          # pragma: no cover  — opentelemetry not installed: no tracing, the code still works
+except ImportError:          # pragma: no cover    opentelemetry not installed: no tracing, the code still works
     _OTEL = False
 
 PROJECT = os.environ.get("TRACE_PROJECT", "dental-agent")
@@ -148,7 +148,7 @@ def span(name: str, kind: str, input=None, attrs: dict | None = None):
 
 
 def llm_request(sp, profile, messages: list[dict], tools=None, max_tokens=None) -> None:
-    """Chat history as a flat list (OTel does not accept a list of dicts — it is silently dropped)."""
+    """Chat history as a flat list (OTel does not accept a list of dicts: it is silently dropped)."""
     attrs = {"llm.model_name": profile.model, "llm.provider": profile.name,
              "llm.invocation_parameters": json.dumps({"temperature": profile.temperature, "max_tokens": max_tokens or profile.max_tokens})}
     for i, m in enumerate(messages):

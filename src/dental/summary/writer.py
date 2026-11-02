@@ -1,4 +1,4 @@
-"""An LLM writes the summary text from the facts; code checks it. On failure — up to 2 retries listing the errors, then the template."""
+"""An LLM writes the summary text from the facts; code checks it. On failure: up to 2 retries listing the errors, then the template."""
 
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ from dental.summary.text import Check, template, verify
 
 LANG_NAME = {"ja": "Japanese (natural, polite business style)", "ru": "Russian"}
 
-# gemma spends part of the budget on "thinking"; at 1024 the Japanese answer was cut off (finish=length) — headroom is needed
+# gemma spends part of the budget on "thinking"; at 1024 the Japanese answer was cut off (finish=length): headroom is needed
 MAX_TOKENS = 4096
 
 SYSTEM = """You write a short morning briefing for the owner of a dental clinic, in {lang}.
@@ -33,7 +33,7 @@ class Section:
     attempts: int
     first_text: str = ""
     first_finish: str = ""
-    first: Check | None = None      # the check of the LLM's very first attempt (before retries and the template) — the honest model metric
+    first: Check | None = None      # the check of the LLM's very first attempt (before retries and the template): the honest model metric
 
 
 def _clean(s: str) -> str:

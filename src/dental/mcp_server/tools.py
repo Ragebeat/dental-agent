@@ -54,7 +54,7 @@ class DentalTools:
         self._cancel_epoch = 0                      # after a cancellation the same slot can be booked again
         self.tz: ZoneInfo = core.clinic.calendar.tz
 
-    # ---------- internals ----------
+    # --- internals ---
     def _call(self, fn: Callable[[], dict]) -> dict:
         try:
             return {"ok": True, **fn()}
@@ -83,7 +83,7 @@ class DentalTools:
                 "start": a.start.isoformat(timespec="minutes"), "end": a.end.isoformat(timespec="minutes"),
                 "status": a.status}
 
-    # ---------- no identity check needed ----------
+    # --- no identity check needed ---
     def list_services(self) -> dict:
         def run():
             cl = self.core.clinic
@@ -150,7 +150,7 @@ class DentalTools:
             return {"handoff_id": hid, "message": "передано сотруднику клиники; он свяжется с пациентом"}
         return self._call(run)
 
-    # ---------- after the identity check ----------
+    # --- after the identity check ---
     def get_my_appointments(self) -> dict:
         def run():
             p = self._need_patient()

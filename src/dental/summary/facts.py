@@ -125,7 +125,7 @@ def collect(core: ClinicCore, now: datetime) -> Facts:
     for code in labels:
         try:
             n = len(core.find_slots(code, today, today, now=now))
-        except Exception:        # noqa: BLE001  service unavailable that day (e.g. new patients only) — not a summary fact
+        except Exception:        # noqa: BLE001  service unavailable that day (e.g. new patients only), not a summary fact
             n = 0
         if n:
             f.free_slots[code] = n

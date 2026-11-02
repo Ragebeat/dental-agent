@@ -4,7 +4,7 @@ No LLM. "Now" always arrives as the `now` parameter (an aware datetime); neither
 Guarantees that cannot be bypassed: exclusion constraints and unique indexes in the database (migrations/001_init.sql);
 the other rules are checked here, inside a transaction that locks the patient row.
 
-Error messages stay in Russian on purpose — see core/errors.py.
+Error messages stay in Russian on purpose: see core/errors.py.
 """
 
 from __future__ import annotations
@@ -75,7 +75,7 @@ class ClinicCore:
         self.url = url or database_url()
         self._clinic: ClinicRuntime | None = None
 
-    # ---------- settings ----------
+    # --- settings ---
     @property
     def clinic(self) -> ClinicRuntime:
         if self._clinic is None:
@@ -104,7 +104,7 @@ class ClinicCore:
             actor=row["actor"], note=row["note"], created_at=row["created_at"].astimezone(tz),
             rescheduled_from_id=row["rescheduled_from_id"], replayed=replayed)
 
-    # ---------- identity check and registration ----------
+    # --- identity check and registration ---
     def verify_patient(self, card_number: int, birth_date: date, *, channel: str, client_key: str,
                        now: datetime) -> Patient:
         """Card + birth date. Locked after N failures in a row, per card or per client."""
@@ -163,7 +163,7 @@ class ClinicCore:
                          " VALUES (%s,'not_started','{}',%s)", [row["id"], now])
         return Patient(row["id"], row["card_number"], row["name"], row["name_kana"], row["phone"], row["birth_date"])
 
-    # ---------- slot search ----------
+    # --- slot search ---
     def find_slots(self, service_code: str, date_from: date, date_to: date, *, now: datetime,
                    time_from: time | None = None, time_to: time | None = None,
                    limit: int | None = None) -> list[datetime]:
@@ -221,7 +221,7 @@ class ClinicCore:
                 return sorted(near)
         return []
 
-    # ---------- booking ----------
+    # --- booking ---
     def book(self, patient_id: int, service_code: str, start: datetime, *, source: str, actor: str, now: datetime,
              note: str | None = None, idempotency_key: str | None = None, chair_id: int | None = None) -> Appointment:
         _aware(now)
@@ -318,7 +318,7 @@ class ClinicCore:
                 raise E.DuplicateBooking("на этот день у вас уже есть запись на эту услугу") from None
         raise E.SlotTaken("это время уже занято", alternatives=self._alternatives(conn, svc, start, now))
 
-    # ---------- cancellation and rescheduling ----------
+    # --- cancellation and rescheduling ---
     def _own_active(self, conn, patient_id: int, appointment_id: int, now: datetime) -> dict:
         row = conn.execute("SELECT * FROM appointments WHERE id = %s AND patient_id = %s FOR UPDATE",
                            [appointment_id, patient_id]).fetchone()
