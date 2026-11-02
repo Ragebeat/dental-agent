@@ -1,9 +1,8 @@
 import pytest
+from helpers import NOW, PID, assert_invariants, jst
 
 from dental.core import errors as E
 from dental.core.db import connect
-
-from helpers import KW, NOW, PID, assert_invariants, jst
 
 
 def appt_id(db_url, pid, status="active", order="ASC"):

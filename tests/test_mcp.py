@@ -1,12 +1,11 @@
 import asyncio
 import json
 
-import pytest
+from helpers import NOW
 from mcp import Client
 
 from dental.core.db import connect
 from dental.mcp_server.server import build_server
-from helpers import NOW
 
 EXPECTED = {"list_services", "search_slots", "verify_identity", "register_new_patient", "get_my_appointments",
             "book_appointment", "cancel_appointment", "reschedule_appointment", "handoff_to_staff"}

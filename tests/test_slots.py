@@ -1,10 +1,9 @@
-from datetime import date, time
+from datetime import date
 
 import pytest
+from helpers import NOW
 
 from dental.core import errors as E
-
-from helpers import NOW, PID, jst
 
 
 def times(core, code, d1, d2=None, **kw):

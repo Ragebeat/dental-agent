@@ -32,12 +32,12 @@ import hashlib
 import hmac
 import json
 import logging
-import os
 import time
 from collections import OrderedDict, deque
+from collections.abc import AsyncIterator, Callable
 from dataclasses import dataclass, field
 from datetime import date, datetime
-from typing import Any, AsyncIterator, Callable, Protocol
+from typing import Any, Protocol
 
 import httpx
 from starlette.applications import Starlette
@@ -155,7 +155,7 @@ class _TurnLimit(Exception):
 
 
 class _Session:
-    def __init__(self, gw: "Gateway", key: str) -> None:
+    def __init__(self, gw: Gateway, key: str) -> None:
         self.gw, self.key = gw, key
         self.queue: asyncio.Queue = asyncio.Queue()
         self.agent: Any = None
@@ -177,7 +177,7 @@ class _Session:
                 while True:
                     try:
                         item = await asyncio.wait_for(self.queue.get(), self.gw.ttl_s)
-                    except asyncio.TimeoutError:
+                    except TimeoutError:
                         self._retire()
                         break
                     if item is None:
@@ -366,8 +366,10 @@ class LineSettings:
     user_salt: str = "dental-agent"
 
     @staticmethod
-    def from_env() -> "LineSettings":
-        from dental.agent.llm import _env            # environment, then .env (as for LLM keys and DATABASE_URL)
+    def from_env() -> LineSettings:
+        from dental.agent.llm import (
+            _env,  # environment, then .env (as for LLM keys and DATABASE_URL)
+        )
         secret = _env("LINE_CHANNEL_SECRET") or ""
         if not secret:
             raise SystemExit("no LINE_CHANNEL_SECRET: without it the webhook signature cannot be verified, the server does not start")

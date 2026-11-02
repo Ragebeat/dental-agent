@@ -6,7 +6,8 @@ import httpx
 import pytest
 
 from dental.agent.llm import LLM, LLMError, LLMReply, OpenAICompat, Profile, ToolCall
-from dental.eval import compare, run as run_mod
+from dental.eval import compare
+from dental.eval import run as run_mod
 
 P = Profile(name="t", base_url="http://x/v1", model="m", api_key_env="")
 

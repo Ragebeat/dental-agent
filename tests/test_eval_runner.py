@@ -5,7 +5,7 @@ import json
 import pytest
 
 from dental.agent.baseline import PROMPT_VERSION, prompt_hash, system_prompt
-from dental.agent.llm import FakeLLM, LLMError, LLMReply, ToolCall, load_profiles, get_llm
+from dental.agent.llm import FakeLLM, LLMError, LLMReply, ToolCall, get_llm, load_profiles
 from dental.config import load_config
 from dental.eval import metrics
 from dental.eval.runner import run_scenario

@@ -127,7 +127,9 @@ def build_snapshot(cfg: ClinicConfig) -> dict:
                 created_at=rand_dt(datetime(2024, 1, 1, 9, tzinfo=tz), 1000 * 24 * 60).isoformat(),
             ))
             bucket.append(next_id)
-            next_id += 1; card += 1; phone_n += 1
+            next_id += 1
+            card += 1
+            phone_n += 1
     pool = test_ids + bg_ids
     key_to_pid = {k: p["id"] for k, p in fx.FIXTURE_PATIENTS.items() if p["id"] is not None}
 

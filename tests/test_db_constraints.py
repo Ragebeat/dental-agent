@@ -2,10 +2,10 @@
 
 import psycopg
 import pytest
+from helpers import jst
 from psycopg.types.range import Range
 
 from dental.core.db import connect
-from helpers import jst
 
 INSERT = ("INSERT INTO appointments (patient_id, service_code, chair_id, during, day, status, source, created_at)"
           " VALUES (%s, %s, %s, %s, %s, %s, 'phone', %s)")
@@ -66,6 +66,5 @@ def test_duplicate_service_same_day(db_url):
 
 
 def test_grid_is_enforced(db_url):
-    with connect(db_url) as c:
-        with pytest.raises(psycopg.errors.CheckViolation):
-            ins(c, 6, "cleaning", 4, jst(2026, 10, 14, 16, 15), jst(2026, 10, 14, 16, 45))
+    with connect(db_url) as c, pytest.raises(psycopg.errors.CheckViolation):
+        ins(c, 6, "cleaning", 4, jst(2026, 10, 14, 16, 15), jst(2026, 10, 14, 16, 45))

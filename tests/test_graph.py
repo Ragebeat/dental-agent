@@ -1,7 +1,7 @@
 """The LangGraph graph on a clinic stub: transitions, confirmation, handoff to a human, protection against fabrications."""
 import re
 
-from graph_helpers import Dialog, FakeClinic, appt, llm_json
+from graph_helpers import Dialog, FakeClinic, appt
 
 ID = "診察券番号は100001、生年月日は1988年4月12日です。"
 

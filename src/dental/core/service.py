@@ -14,7 +14,7 @@ import re
 import secrets
 import unicodedata
 from collections import defaultdict
-from dataclasses import dataclass, replace
+from dataclasses import dataclass
 from datetime import date, datetime, time, timedelta
 
 import psycopg
@@ -111,19 +111,18 @@ class ClinicCore:
         _aware(now)
         rules = self.clinic.rules
         result: Patient | None = None
-        with self._connect() as conn:
-            with conn.transaction():
-                for key in sorted({f"auth:card:{card_number}", f"auth:client:{client_key}"}):
-                    conn.execute("SELECT pg_advisory_xact_lock(hashtextextended(%s, 0))", [key])
-                for col, val in (("card_number", card_number), ("client_key", client_key)):
-                    self._check_lock(conn, col, val, now, rules)
-                row = conn.execute("SELECT * FROM patients WHERE card_number = %s", [card_number]).fetchone()
-                ok = row is not None and row["birth_date"] == birth_date
-                conn.execute("INSERT INTO auth_attempts (channel, client_key, card_number, success, at)"
-                             " VALUES (%s,%s,%s,%s,%s)", [channel, client_key, card_number, ok, now])
-                if ok:
-                    result = Patient(row["id"], row["card_number"], row["name"], row["name_kana"], row["phone"],
-                                     row["birth_date"])
+        with self._connect() as conn, conn.transaction():
+            for key in sorted({f"auth:card:{card_number}", f"auth:client:{client_key}"}):
+                conn.execute("SELECT pg_advisory_xact_lock(hashtextextended(%s, 0))", [key])
+            for col, val in (("card_number", card_number), ("client_key", client_key)):
+                self._check_lock(conn, col, val, now, rules)
+            row = conn.execute("SELECT * FROM patients WHERE card_number = %s", [card_number]).fetchone()
+            ok = row is not None and row["birth_date"] == birth_date
+            conn.execute("INSERT INTO auth_attempts (channel, client_key, card_number, success, at)"
+                         " VALUES (%s,%s,%s,%s,%s)", [channel, client_key, card_number, ok, now])
+            if ok:
+                result = Patient(row["id"], row["card_number"], row["name"], row["name_kana"], row["phone"],
+                                 row["birth_date"])
         if result is None:   # the same for a wrong date and a non-existent card: no "oracle"
             raise E.PatientNotVerified("номер карты и дата рождения не совпадают")
         return result
@@ -225,7 +224,8 @@ class ClinicCore:
     # ---------- booking ----------
     def book(self, patient_id: int, service_code: str, start: datetime, *, source: str, actor: str, now: datetime,
              note: str | None = None, idempotency_key: str | None = None, chair_id: int | None = None) -> Appointment:
-        _aware(now); _aware(start)
+        _aware(now)
+        _aware(start)
         svc = self._service(service_code)
         with self._connect() as conn, conn.transaction():
             self._lock_patient(conn, patient_id)
@@ -349,7 +349,8 @@ class ClinicCore:
     def reschedule(self, patient_id: int, appointment_id: int, new_start: datetime, *, actor: str, now: datetime,
                    idempotency_key: str | None = None, source: str | None = None) -> Appointment:
         """The old appointment is cancelled and the new one created in one transaction: on refusal the old one stays."""
-        _aware(now); _aware(new_start)
+        _aware(now)
+        _aware(new_start)
         with self._connect() as conn, conn.transaction():
             self._lock_patient(conn, patient_id)
             if idempotency_key:

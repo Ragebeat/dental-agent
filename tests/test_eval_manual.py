@@ -14,10 +14,11 @@ SC = {s.id.split("_")[0]: s for s in load_scenarios()}
 
 def player(tmp, replies, stop):
     """Answers every awaiting_patient status with the next message, using the same commands as a real player."""
-    import io, sys
+    import io
+    import sys
     it = iter(replies)
     while not stop.is_set():
-        for d, s in list(manual._waiting()):
+        for d, _ in list(manual._waiting()):
             sys.stdin = io.StringIO(next(it))
             manual.cmd_say(d.name)
         stop.wait(0.05)
@@ -50,7 +51,8 @@ def test_wait_shows_persona_once_and_say_rejects_double(tmp_path, monkeypatch, c
     sim = manual.ManualSimulator(SC["s01"], CFG.now(), timeout_s=0.2, poll_s=0.05)
     assert manual.cmd_wait(1) == 0 and "ROLE" in capsys.readouterr().out
     assert manual.cmd_wait(1) == 0 and "ROLE" not in capsys.readouterr().out
-    import io, sys
+    import io
+    import sys
     sys.stdin = io.StringIO("こんにちは")
     assert manual.cmd_say(sim.dir.name) == 0
     sys.stdin = io.StringIO("ещё раз")

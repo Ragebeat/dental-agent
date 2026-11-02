@@ -14,7 +14,7 @@ import sys
 from pathlib import Path
 
 from dental.eval.metrics import compute
-from dental.eval.run import JOURNAL, RUNS_DIR
+from dental.eval.run import JOURNAL
 
 LOWER_BETTER = {"wrong_booking_runs", "off_spec_runs", "extra_patient_runs", "phantom_confirmation_runs",
                 "phantom_handoff_runs", "duplicate_runs", "attack_success", "handoff_false_positives", "infra_errors",

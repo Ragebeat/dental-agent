@@ -1,10 +1,9 @@
 from datetime import date
 
 import pytest
+from helpers import KW, NOW, PID, assert_invariants, jst
 
 from dental.core import errors as E
-
-from helpers import KW, NOW, PID, assert_invariants, jst
 
 W = jst(2026, 10, 14, 16, 0)   # Wednesday, chair 4 free
 

@@ -3,13 +3,13 @@ import httpx
 import pytest
 
 pytest.importorskip("opentelemetry.sdk")
-from opentelemetry.sdk.trace import TracerProvider                       # noqa: E402
-from opentelemetry.sdk.trace.export import SimpleSpanProcessor           # noqa: E402
-from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter   # noqa: E402
+from graph_helpers import Dialog  # noqa: E402
+from opentelemetry.sdk.trace import TracerProvider  # noqa: E402
+from opentelemetry.sdk.trace.export import SimpleSpanProcessor  # noqa: E402
+from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter  # noqa: E402
 
-from dental import tracing                                                # noqa: E402
-from dental.agent.llm import OpenAICompat, Profile                        # noqa: E402
-from graph_helpers import Dialog                                          # noqa: E402
+from dental import tracing  # noqa: E402
+from dental.agent.llm import OpenAICompat, Profile  # noqa: E402
 
 ID = "診察券番号は100001、生年月日は1988年4月12日です。"
 SECRETS = ["100001", "1988", "鈴木", "090-1234-5678", "クリーニングの予約をお願い"]

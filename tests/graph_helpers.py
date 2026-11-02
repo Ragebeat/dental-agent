@@ -1,7 +1,7 @@
 """An MCP client stub for graph tests: a small in-memory clinic, no database and no LLM."""
 import asyncio
 import json
-from datetime import date, datetime
+from datetime import datetime
 from types import SimpleNamespace
 from zoneinfo import ZoneInfo
 

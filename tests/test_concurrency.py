@@ -1,10 +1,10 @@
 from datetime import date
 
 import pytest
+from helpers import KW, NOW, PID, assert_invariants, free_patients, jst, run_parallel
 
 from dental.core import errors as E
 from dental.core.db import connect
-from helpers import KW, NOW, PID, assert_invariants, free_patients, jst, run_parallel
 
 SLOT = jst(2026, 10, 14, 16, 0)       # Wednesday, chair 4 free
 

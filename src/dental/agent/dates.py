@@ -12,7 +12,7 @@ import calendar
 import re
 import unicodedata
 from datetime import date, datetime, time, timedelta
-from typing import Literal, Optional
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
@@ -29,20 +29,20 @@ PARTS: dict[str, tuple[time, time]] = {
 
 class DateIntent(BaseModel):
     """Что пациент сказал про дату и время. Пустые поля — не сказал."""
-    day_offset: Optional[int] = Field(None, description="через сколько дней от сегодня: 0 сегодня, 1 завтра, 2 послезавтра")
-    week_offset: Optional[int] = Field(None, description="0 эта неделя, 1 следующая (来週), 2 через неделю (再来週)")
-    month_offset: Optional[int] = Field(None, description="0 этот месяц, 1 следующий (来月), 2 через месяц")
-    month_part: Optional[Literal["start", "end"]] = Field(None, description="начало/конец месяца (月初/月末)")
-    after_days: Optional[int] = Field(None, ge=0, description="через N дней (N日後)")
-    after_weeks: Optional[int] = Field(None, ge=0, description="через N недель (N週間後)")
-    after_months: Optional[int] = Field(None, ge=0, description="через N месяцев (Nか月後, 半年後 = 6)")
-    month: Optional[int] = Field(None, ge=1, le=12)
-    day: Optional[int] = Field(None, ge=1, le=31)
-    weekday: Optional[int] = Field(None, ge=0, le=6, description="0=понедельник … 6=воскресенье")
-    part_of_day: Optional[Literal["morning", "afternoon", "evening", "night"]] = None
-    time: Optional[str] = Field(None, description="точное время HH:MM, если названо")
-    time_after: Optional[str] = Field(None, description="не раньше HH:MM («14時以降»)")
-    time_before: Optional[str] = Field(None, description="не позже HH:MM («15時まで»)")
+    day_offset: int | None = Field(None, description="через сколько дней от сегодня: 0 сегодня, 1 завтра, 2 послезавтра")
+    week_offset: int | None = Field(None, description="0 эта неделя, 1 следующая (来週), 2 через неделю (再来週)")
+    month_offset: int | None = Field(None, description="0 этот месяц, 1 следующий (来月), 2 через месяц")
+    month_part: Literal["start", "end"] | None = Field(None, description="начало/конец месяца (月初/月末)")
+    after_days: int | None = Field(None, ge=0, description="через N дней (N日後)")
+    after_weeks: int | None = Field(None, ge=0, description="через N недель (N週間後)")
+    after_months: int | None = Field(None, ge=0, description="через N месяцев (Nか月後, 半年後 = 6)")
+    month: int | None = Field(None, ge=1, le=12)
+    day: int | None = Field(None, ge=1, le=31)
+    weekday: int | None = Field(None, ge=0, le=6, description="0=понедельник … 6=воскресенье")
+    part_of_day: Literal["morning", "afternoon", "evening", "night"] | None = None
+    time: str | None = Field(None, description="точное время HH:MM, если названо")
+    time_after: str | None = Field(None, description="не раньше HH:MM («14時以降»)")
+    time_before: str | None = Field(None, description="не позже HH:MM («15時まで»)")
     asap: bool = Field(False, description="как можно раньше / в любое время")
 
     def is_empty(self) -> bool:
@@ -52,8 +52,8 @@ class DateIntent(BaseModel):
 class Window(BaseModel):
     date_from: date
     date_to: date
-    time_from: Optional[time] = None
-    time_to: Optional[time] = None
+    time_from: time | None = None
+    time_to: time | None = None
     truncated: bool = False          # range cut down to 14 days
     note: str = ""
 
@@ -121,9 +121,7 @@ def parse_ja(text: str) -> DateIntent:
     if h is not None:
         after = bool(re.search(r"(?<!\d)\d{1,2}(?:時|:\d{2})(?:\s*(?:半|\d{1,2}分))?\s*(?:以降|以後|から)", t))
         before = bool(re.search(r"(?<!\d)\d{1,2}(?:時|:\d{2})(?:\s*(?:半|\d{1,2}分))?\s*(?:まで|以前|までに)", t))
-        if h < 9 and it.part_of_day in ("afternoon", "evening", "night"):      # 午後3時 → 15:00
-            h += 12
-        elif h < 9 and it.part_of_day is None and h >= 1:                      # «3時» with no qualifier: the clinic opens at 9
+        if h < 9 and it.part_of_day in ("afternoon", "evening", "night") or h < 9 and it.part_of_day is None and h >= 1:      # 午後3時 → 15:00
             h += 12
         if 0 <= h < 24 and 0 <= mi < 60:
             hhmm = f"{h:02d}:{mi:02d}"

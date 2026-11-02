@@ -1,10 +1,11 @@
 """The LINE channel on a live database: the real MCP server behind the session gateway; identification arrives with channel='line' and the user key."""
 import asyncio
 
-from dental.channels.eval_bridge import USER, LineAgent
-from dental.eval.runner import RunSettings
 from graph_helpers import llm_json
 from helpers import NOW
+
+from dental.channels.eval_bridge import USER, LineAgent
+from dental.eval.runner import RunSettings
 
 ID = "診察券番号は100001、生年月日は1988年4月12日です。"
 

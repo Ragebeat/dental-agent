@@ -11,7 +11,7 @@ import json
 from dataclasses import dataclass, field
 from datetime import datetime
 
-from dental.agent.llm import LLM, LLMError, LLMReply
+from dental.agent.llm import LLM, LLMReply
 
 PROMPT_VERSION = "baseline-v1"
 

@@ -56,21 +56,21 @@ def load_snapshot(conn: psycopg.Connection, snap: dict) -> dict:
         conn.execute("INSERT INTO clinic_settings (key, value, updated_at) VALUES ('rules', %s, %s::timestamptz)",
                      [Jsonb(st["rules"]), now])
         _many(conn, "INSERT INTO chairs (id, label) VALUES (%s, %s)", [(c, f"chair {c}") for c in snap["chairs"]])
-        _many(conn, 
+        _many(conn,
             "INSERT INTO services (code, label_ja, duration_slots, horizon_days, min_lead_hours, cancel_before_hours,"
             " allowed_windows, recall_months, new_patient_only, is_active) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
             [(c, s["label_ja"], s["duration_slots"], s["horizon_days"], s["min_lead_hours"], s["cancel_before_hours"],
               None if s["allowed_windows"] is None else Jsonb(s["allowed_windows"]), s["recall_months"],
               s["new_patient_only"], s["is_active"]) for c, s in snap["services"].items()])
-        _many(conn, 
+        _many(conn,
             "INSERT INTO patients (id, card_number, name, name_kana, phone, birth_date, is_synthetic, created_at)"
             " VALUES (%s,%s,%s,%s,%s,%s::date,%s,%s::timestamptz)",
             [(p["id"], p["card_number"], p["name"], p["name_kana"], p["phone"], p["birth_date"], p["is_synthetic"],
               p["created_at"]) for p in snap["patients"]])
-        _many(conn, 
+        _many(conn,
             "INSERT INTO patient_intake (patient_id, status, answers, updated_at) VALUES (%s,'not_started','{}',%s::timestamptz)",
             [(p["id"], now) for p in snap["patients"]])
-        _many(conn, 
+        _many(conn,
             "INSERT INTO appointments (id, patient_id, service_code, chair_id, during, day, status, source, note, actor,"
             " idempotency_key, created_at, cancelled_at, cancel_reason, rescheduled_from_id)"
             " VALUES (%s,%s,%s,%s,tstzrange(%s::timestamptz, %s::timestamptz, '[)'),%s::date,%s,%s,%s,%s,%s,"

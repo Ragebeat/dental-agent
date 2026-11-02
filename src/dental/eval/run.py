@@ -10,17 +10,17 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-from pathlib import Path
 import traceback
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
+from pathlib import Path
 from zoneinfo import ZoneInfo
 
 from dental import tracing
 from dental.agent.baseline import PROMPT_VERSION, prompt_hash
 from dental.agent.llm import LLMError, get_llm, load_profiles
 from dental.config import ROOT, config_sha, load_config
-from dental.core.db import connect, database_url
+from dental.core.db import database_url
 from dental.core.loader import build_template, drop_database, unique_name
 from dental.eval.metrics import compute
 from dental.eval.runner import RunSettings, run_scenario
@@ -55,7 +55,9 @@ def fingerprint(agent_llm, sim_llm, cfg, scenarios, settings: RunSettings, tools
 
 def _tools_hash(admin_url: str, template_db: str) -> str:
     import asyncio
+
     from mcp import Client
+
     from dental.core.db import with_dbname
     from dental.core.service import ClinicCore
     from dental.mcp_server.server import build_server

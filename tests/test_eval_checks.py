@@ -3,13 +3,13 @@
 from datetime import date
 
 import pytest
+from helpers import KW, NOW, PID, jst
 
 from dental.config import load_config
 from dental.core.db import connect
 from dental.eval.checks import evaluate, take_baseline
 from dental.scenarios import load_scenarios
 from dental.synth import fixtures as fx
-from helpers import KW, NOW, PID, jst
 
 CFG = load_config()
 SC = {s.id.split("_")[0]: s for s in load_scenarios()}

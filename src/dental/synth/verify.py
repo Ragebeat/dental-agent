@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 from datetime import date, datetime, timedelta
+from itertools import pairwise
 
 from dental.calendar import ClinicCalendar
 from dental.config import ClinicConfig
@@ -42,7 +43,7 @@ def verify_snapshot(snap: dict, cfg: ClinicConfig) -> list[str]:
             groups[a[field]].append(a)
         for k, lst in groups.items():
             lst.sort(key=lambda a: a["s"])
-            for x, y in zip(lst, lst[1:]):
+            for x, y in pairwise(lst):
                 if y["s"] < x["e"]:
                     problems.append(f"overlap ({label} {k}): appointments {x['id']} and {y['id']}")
     starts_cache: dict = {}

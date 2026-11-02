@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import html
 import re
-from datetime import datetime
 
 from dental.summary.facts import Facts
 from dental.summary.text import REASON, SERVICE_RU

@@ -5,7 +5,7 @@ Scenario texts (title, goal_ru, persona) stay as written: they are inputs of the
 from __future__ import annotations
 
 import re
-from datetime import date, datetime, time, timedelta
+from datetime import date, datetime, time
 from pathlib import Path
 from typing import Any, Literal
 

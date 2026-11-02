@@ -85,7 +85,7 @@ class ClinicConfig(_Strict):
     synthetic: Synthetic
 
     @model_validator(mode="after")
-    def _check(self) -> "ClinicConfig":
+    def _check(self) -> ClinicConfig:
         slot = self.clinic.slot_minutes
         for sh in self.hours:
             o = sh.open.hour * 60 + sh.open.minute

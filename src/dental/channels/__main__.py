@@ -16,7 +16,14 @@ from zoneinfo import ZoneInfo
 
 from dental.agent.llm import get_llm
 from dental.channels.eval_bridge import LineAgent
-from dental.channels.line import Gateway, LineApi, LineSettings, McpSessions, RecordingSender, create_app
+from dental.channels.line import (
+    Gateway,
+    LineApi,
+    LineSettings,
+    McpSessions,
+    RecordingSender,
+    create_app,
+)
 from dental.config import load_config
 from dental.core.service import ClinicCore
 

@@ -2,8 +2,18 @@
 import pytest
 
 from dental.agent.dates import DateIntent
-from dental.agent.understand import (merge_intent, parse_action, parse_birth, parse_card, parse_choice, parse_flags,
-                                     parse_name_kana, parse_phone, parse_service, parse_yesno)
+from dental.agent.understand import (
+    merge_intent,
+    parse_action,
+    parse_birth,
+    parse_card,
+    parse_choice,
+    parse_flags,
+    parse_name_kana,
+    parse_phone,
+    parse_service,
+    parse_yesno,
+)
 
 SERVICES = [{"code": c, "label_ja": j} for c, j in (("chiryo", "治療"), ("cleaning", "クリーニング"), ("kenshin", "定期検診"), ("shoshin", "初診"))]
 

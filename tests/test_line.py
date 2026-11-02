@@ -5,11 +5,11 @@ import json
 from datetime import timedelta
 
 import httpx
+from graph_helpers import NOW, FakeClinic, llm_json
 
 from dental.agent.graph import GraphAgent
 from dental.channels import line
 from dental.channels.line import Gateway, RecordingSender, create_app, sign
-from graph_helpers import NOW, FakeClinic, llm_json
 
 SECRET = "s3cret"
 ID = "診察券番号は100001、生年月日は1988年4月12日です。"
@@ -59,7 +59,7 @@ def test_signature_checked_before_anything_runs():
         await gw.drain()
         await gw.aclose()
         return r1.status_code, r2.status_code, r3.status_code, f.opened, len(s.sent)
-    assert run(main()) == (401, 401, 200, ["%s" % line.Gateway(None, None, now_fn=lambda: NOW).user_key("U1")], 1)
+    assert run(main()) == (401, 401, 200, [str(line.Gateway(None, None, now_fn=lambda: NOW).user_key("U1"))], 1)
 
 
 def test_bad_json_is_400_and_empty_verify_event_is_200():
@@ -107,7 +107,7 @@ def test_users_are_isolated():
         await post(app, [ev("UA", "クリーニングの予約をお願いしたいです", "a1", "ta1"), ev("UA", ID, "a2", "ta2"),
                          ev("UB", "予約をキャンセルしたいです", "b1", "tb1")])
         await gw.drain()
-        by = {tok: txt for (_, tok, _), txt in zip(s.sent, s.texts())}
+        by = {tok: txt for (_, tok, _), txt in zip(s.sent, s.texts(), strict=True)}
         keys = list(f.clinics)
         ca, cb = f.clinics[gw.user_key("UA")], f.clinics[gw.user_key("UB")]
         await gw.aclose()

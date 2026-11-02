@@ -24,9 +24,22 @@ from dental import tracing
 from dental.agent.baseline import TokenCapReached, Usage
 from dental.agent.dates import DateIntent, parse_ja, resolve
 from dental.agent.llm import LLM
-from dental.agent.understand import (NEW_PATIENT, has_date_info, merge_intent, norm, parse_action, parse_birth, parse_card,
-                                     parse_choice, parse_flags, parse_name_kana, parse_phone, parse_reg_part, parse_service,
-                                     parse_yesno)
+from dental.agent.understand import (
+    NEW_PATIENT,
+    has_date_info,
+    merge_intent,
+    norm,
+    parse_action,
+    parse_birth,
+    parse_card,
+    parse_choice,
+    parse_flags,
+    parse_name_kana,
+    parse_phone,
+    parse_reg_part,
+    parse_service,
+    parse_yesno,
+)
 
 GRAPH_VERSION = "graph-v7"
 WD = "月火水木金土日"
@@ -321,11 +334,11 @@ class GraphAgent:
                 u.update(action=a, appt=None, appts=[], options=[], chosen=None)
             if not s.get("action"):
                 u.setdefault("action", a)
-        if not s.get("await_confirm") or u.get("yn") is False:
-            if (sv := parse_service(text, services)) and not s.get("is_new"):
-                u["service"] = sv
-                if not (u.get("action") or s.get("action")):
-                    u["action"] = "book"            # «クリーニングをお願いします» — no verb, but it is a booking
+        if ((not s.get("await_confirm") or u.get("yn") is False)
+                and (sv := parse_service(text, services)) and not s.get("is_new")):
+            u["service"] = sv
+            if not (u.get("action") or s.get("action")):
+                u["action"] = "book"                # «クリーニングをお願いします» — no verb, but it is a booking
         old = self._intent(s)
         new = parse_ja(ids)
         opts = s.get("options") or []

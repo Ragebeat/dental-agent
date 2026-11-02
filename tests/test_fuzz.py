@@ -2,10 +2,10 @@ import random
 from datetime import timedelta
 
 import pytest
+from helpers import CAL, NOW, assert_invariants
 
 from dental.core import errors as E
 from dental.core.db import connect
-from helpers import CAL, NOW, TZ, assert_invariants
 
 OPS = 300
 
